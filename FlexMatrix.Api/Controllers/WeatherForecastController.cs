@@ -1,3 +1,4 @@
+using FlexMatrix.Api.Data.Models;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FlexMatrix.Api.Controllers

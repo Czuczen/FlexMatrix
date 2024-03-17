@@ -1,4 +1,4 @@
-namespace FlexMatrix.Api
+namespace FlexMatrix.Api.Data.Models
 {
     public class WeatherForecast
     {
