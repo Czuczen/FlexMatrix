@@ -1,0 +1,11 @@
+# Default to text files
+* text=auto
+
+# Set specific files or directories to binary
+*.jpg binary
+*.png binary
+*.pdf binary
+/assets/ binary
+
+# Vendored directories
+/wwwroot/lib/ linguist-vendored
