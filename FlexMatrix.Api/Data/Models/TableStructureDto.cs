@@ -2,5 +2,6 @@
 {
     public class TableStructureDto
     {
+        public string TableName { get; set; }
     }
 }

@@ -1,6 +1,8 @@
-﻿using FlexMatrix.Api.Data.Models;
+﻿using FlexMatrix.Api.Data.DataBase;
+using FlexMatrix.Api.Data.Models;
 using FlexMatrix.Api.Data.Services;
 using Microsoft.AspNetCore.Mvc;
+using UnitOfWork = FlexMatrix.Api.Attributes.UnitOfWorkAttribute;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -12,27 +14,25 @@ namespace FlexMatrix.Api.Controllers
     {
         private readonly IStructureService _structureService;
 
+
         public StructureController(IStructureService structureService)
         {
             _structureService = structureService;
         }
 
 
-
-        [HttpPost]
+        [UnitOfWork]
+        [HttpPost(Name = "CreateNewTableStructure")]
         public async Task<IActionResult> CreateNewTableStructure(TableStructureDto tableStructure)
         {
-            try
+            var result = await _structureService.CreateTableStructure(tableStructure);
+            if (result)
             {
-                // Zakładamy, że TableService to serwis, który zajmuje się logiką bazy danych
-                // a CreateNewTableStructureAsync to metoda w tym serwisie
-                //await _tableService.CreateNewTableStructureAsync(tableStructure);
-                return Ok(); // Możesz też zwrócić jakieś szczegóły lub potwierdzenie
+                return Ok();
             }
-            catch (Exception ex)
+            else
             {
-                // Obsługa błędów - dostosuj do swoich potrzeb
-                return StatusCode(500, "Internal server error: " + ex.Message);
+                return StatusCode(500, "Internal server error: " + "empty");
             }
         }
 
