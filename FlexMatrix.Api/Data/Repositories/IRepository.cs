@@ -2,10 +2,19 @@
 {
     public interface IRepository
     {
-        Task<bool> CreateTableAsync(string tableName);
+        Task<Dictionary<string, object>> GetById(string tableName, int id);
 
-        Task<bool> AddColumnToTableAsync(string tableName, string columnName, string dataType);
+        Task<IEnumerable<Dictionary<string, object>>> GetAll(string tableName);
 
-        Task<IEnumerable<dynamic>> GetAllTablesAsync();
+        Task<bool> Create(string tableName, Dictionary<string, object> columnValues);
+
+        Task<bool> Update(string tableName, int id, Dictionary<string, object> columnValues);
+
+        Task<bool> Delete(string tableName, int id);
+
+
+        Task<bool> TableExist(string tableName);
+
+        Task<IEnumerable<Dictionary<string, object>>> GetAllTables();
     }
 }
