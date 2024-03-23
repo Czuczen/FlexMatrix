@@ -1,6 +1,5 @@
 ﻿using FlexMatrix.Api.Data.DataBase;
 using FlexMatrix.Api.Data.Models;
-using FlexMatrix.Api.Data.Validators;
 using Microsoft.AspNetCore.DataProtection.KeyManagement;
 using System.Text;
 
@@ -18,15 +17,6 @@ namespace FlexMatrix.Api.Data.Repositories.StructureRepository
 
         public async Task<bool> CreateTable(TableStructureDto tableStructure)
         {
-            var tableStructure = new TableStructureDto
-            {
-                // Przygotowanie struktury tabeli
-            };
-
-            var validator = new TableStructureValidator();
-            validator.Validate(tableStructure);
-
-
             var sqlBuilder = new StringBuilder($"CREATE TABLE [dbo].[{tableStructure.TableName}] (");
 
             if (tableStructure.PrimaryKeyType == "UNIQUEIDENTIFIER")

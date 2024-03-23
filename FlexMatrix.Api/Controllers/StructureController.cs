@@ -25,14 +25,21 @@ namespace FlexMatrix.Api.Controllers
         [HttpPost(Name = "CreateNewTableStructure")]
         public async Task<IActionResult> CreateNewTableStructure(TableStructureDto tableStructure)
         {
-            var result = await _structureService.CreateTableStructure(tableStructure);
-            if (result)
+            if (ModelState.IsValid)
             {
-                return Ok();
+                var result = await _structureService.CreateTableStructure(tableStructure);
+                if (result)
+                {
+                    return Ok();
+                }
+                else
+                {
+                    return StatusCode(500, "Internal server error: " + "empty");
+                }
             }
             else
             {
-                return StatusCode(500, "Internal server error: " + "empty");
+                return BadRequest(ModelState);
             }
         }
 
