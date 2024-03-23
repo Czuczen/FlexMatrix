@@ -19,6 +19,93 @@ public sealed class UnitOfWork : IUnitOfWork
     }
 
 
+
+    public async Task<IEnumerable<Dictionary<string, object>>> GetData(string query, Dictionary<string, object>? parameters = null)
+    {
+        var results = new List<Dictionary<string, object>>();
+
+        using (var command = _connection.CreateCommand())
+        {
+            if (_transaction == null)
+                throw new InvalidOperationException("The transaction has not been opened.");
+
+            command.Transaction = _transaction;
+            command.CommandText = query;
+
+            if (parameters != null)
+            {
+                foreach (var item in parameters)
+                {
+                    var parameter = command.CreateParameter();
+                    parameter.ParameterName = $"@{item.Key}";
+                    parameter.Value = item.Value ?? DBNull.Value;
+                    command.Parameters.Add(parameter);
+                }
+            }
+
+            using var reader = await command.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                var row = new Dictionary<string, object>();
+                for (int i = 0; i < reader.FieldCount; i++)
+                    row.Add(reader.GetName(i), reader.IsDBNull(i) ? null : reader.GetValue(i));
+
+                results.Add(row);
+            }
+        }
+
+        return results;
+    }
+
+    public async Task<bool> ExecuteCommand(string sql, Dictionary<string, object>? parameters = null)
+    {
+        if (_transaction == null)
+            throw new InvalidOperationException("The transaction has not been opened.");
+
+        using var command = _connection.CreateCommand();
+        command.CommandText = sql;
+        command.Transaction = _transaction;
+
+        if (parameters != null)
+        {
+            foreach (var item in parameters)
+            {
+                var parameter = command.CreateParameter();
+                parameter.ParameterName = $"@{item.Key}";
+                parameter.Value = item.Value ?? DBNull.Value;
+                command.Parameters.Add(parameter);
+            }
+        }
+
+        var result = await command.ExecuteNonQueryAsync();
+        return result > 0;
+    }
+
+    public async Task<bool> ExecuteScalarCommand(string sql, Dictionary<string, object>? parameters = null)
+    {
+        if (_transaction == null)
+            throw new InvalidOperationException("The transaction has not been opened.");
+
+        using var command = _connection.CreateCommand();
+        command.CommandText = sql;
+        command.Transaction = _transaction;
+
+        if (parameters != null)
+        {
+            foreach (var item in parameters)
+            {
+                var parameter = command.CreateParameter();
+                parameter.ParameterName = $"@{item.Key}";
+                parameter.Value = item.Value ?? DBNull.Value;
+                command.Parameters.Add(parameter);
+            }
+        }
+
+        // Jeśli znajdziemy tabelę, ExecuteScalar zwróci 1, w przeciwnym razie null
+        var result = await command.ExecuteScalarAsync();
+        return result != null;
+    }
+
     private async Task OpenConnection()
     {
         _logger.LogDebug("Opening database connection");
@@ -99,86 +186,5 @@ public sealed class UnitOfWork : IUnitOfWork
                 _logger.LogError("Can't dispose connection", ex);
             }
         }
-    }
-
-    // ===========================================================================================
-    // ===========================================================================================
-    // ===========================================================================================
-
-    public async Task<IEnumerable<Dictionary<string, object>>> GetData(string query, Dictionary<string, object> parameters)
-    {
-        var results = new List<Dictionary<string, object>>();
-
-        using (var command = _connection.CreateCommand())
-        {
-            if (_transaction == null)
-                throw new InvalidOperationException("The transaction has not been opened.");
-
-            command.Transaction = _transaction;
-            command.CommandText = query;
-
-            foreach (var item in parameters)
-            {
-                var parameter = command.CreateParameter();
-                parameter.ParameterName = $"@{item.Key}";
-                parameter.Value = item.Value ?? DBNull.Value;
-                command.Parameters.Add(parameter);
-            }
-
-            using var reader = await command.ExecuteReaderAsync();
-            while (await reader.ReadAsync())
-            {
-                var row = new Dictionary<string, object>();
-                for (int i = 0; i < reader.FieldCount; i++)
-                    row.Add(reader.GetName(i), reader.IsDBNull(i) ? null : reader.GetValue(i));
-
-                results.Add(row);
-            }
-        }
-
-        return results;
-    }
-
-    public async Task<bool> ExecuteScalarCommand(string sql, Dictionary<string, object> parameters)
-    {
-        if (_transaction == null)
-            throw new InvalidOperationException("The transaction has not been opened.");
-
-        using var command = _connection.CreateCommand();
-        command.CommandText = sql;
-        command.Transaction = _transaction;
-
-        foreach (var item in parameters)
-        {
-            var parameter = command.CreateParameter();
-            parameter.ParameterName = $"@{item.Key}";
-            parameter.Value = item.Value ?? DBNull.Value;
-            command.Parameters.Add(parameter);
-        }
-
-        // Jeśli znajdziemy tabelę, ExecuteScalar zwróci 1, w przeciwnym razie null
-        var result = await command.ExecuteScalarAsync();
-        return result != null;
-    }
-
-    public async Task<bool> ExecuteCommand(string sql, Dictionary<string, object> parameters)
-    {
-        if (_transaction == null)
-            throw new InvalidOperationException("The transaction has not been opened.");
-
-        using var command = _connection.CreateCommand();
-        command.CommandText = sql;
-        command.Transaction = _transaction;
-
-        foreach (var item in parameters)
-        {
-            var parameter = command.CreateParameter();
-            parameter.ParameterName = $"@{item.Key}";
-            parameter.Value = item.Value ?? DBNull.Value;
-            command.Parameters.Add(parameter);
-        }
-
-        var result = await command.ExecuteNonQueryAsync();
-        return result > 0;
     }
 }

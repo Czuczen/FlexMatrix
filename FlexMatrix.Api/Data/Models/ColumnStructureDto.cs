@@ -6,8 +6,18 @@
 
         public string Type { get; set; }
 
+        public int? Length { get; set; }
+
+        public int? Precision { get; set; }
+
+        public int? Scale { get; set; }
+
         public bool IsForeignKey { get; set; }
 
-        public bool ReferencesTableName { get; set; }
+        public string? ReferencesTableName { get; set; }
+
+        public string? DeleteType {  get; set; }
+
+        public string? UpdateType { get; set; }
     }
 }

@@ -10,10 +10,10 @@ namespace FlexMatrix.Api.Data.DataBase
 
         Task RollbackTransaction();
 
-        Task<IEnumerable<Dictionary<string, object>>> GetData(string query, Dictionary<string, object> parameters);
+        Task<IEnumerable<Dictionary<string, object>>> GetData(string query, Dictionary<string, object>? parameters = null);
 
-        Task<bool> ExecuteScalarCommand(string sql, Dictionary<string, object> parameters);
+        Task<bool> ExecuteScalarCommand(string sql, Dictionary<string, object>? parameters = null);
 
-        Task<bool> ExecuteCommand(string sql, Dictionary<string, object> parameters);
+        Task<bool> ExecuteCommand(string sql, Dictionary<string, object>? parameters = null);
     }
 }
