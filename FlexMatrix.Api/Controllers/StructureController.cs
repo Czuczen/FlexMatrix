@@ -27,6 +27,7 @@ namespace FlexMatrix.Api.Controllers
         {
             if (ModelState.IsValid)
             {
+                var tableStr = await _structureService.GetTableStructure(tableStructure.TableName);
                 var result = await _structureService.CreateTableStructure(tableStructure);
                 if (result)
                 {

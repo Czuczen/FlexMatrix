@@ -13,9 +13,16 @@ namespace FlexMatrix.Api.Data.Services
             _repository = repository;
         }
 
+
+        public async Task<IEnumerable<IEnumerable<Dictionary<string, object>>>> GetTableStructure(string tableName)
+        {
+            var result = await _repository.GetTableStructure(tableName);
+            return result;
+        }
+
         public async Task<bool> CreateTableStructure(TableStructureDto tableStructure)
         {
-            var result = await _repository.CreateTable(tableStructure);
+            var result = await _repository.CreateTableStructure(tableStructure);
             return result;
         }
     }

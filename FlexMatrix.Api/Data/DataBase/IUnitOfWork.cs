@@ -4,16 +4,18 @@ namespace FlexMatrix.Api.Data.DataBase
 {
     public interface IUnitOfWork : IAsyncDisposable
     {
+        Task<IEnumerable<Dictionary<string, object>>> ExecuteSingleQuery(string query, Dictionary<string, object>? parameters = null);
+
+        Task<IEnumerable<IEnumerable<Dictionary<string, object>>>> ExecuteMultiQuery(string query, int queriesNumber, Dictionary<string, object>? parameters = null);
+
+        Task<bool> ExecuteCommand(string sql, Dictionary<string, object>? parameters = null);
+
+        Task<bool> ExecuteScalarCommand(string sql, Dictionary<string, object>? parameters = null);
+
         Task BeginTransaction();
 
         Task SaveTransaction();
 
         Task RollbackTransaction();
-
-        Task<IEnumerable<Dictionary<string, object>>> GetData(string query, Dictionary<string, object>? parameters = null);
-
-        Task<bool> ExecuteScalarCommand(string sql, Dictionary<string, object>? parameters = null);
-
-        Task<bool> ExecuteCommand(string sql, Dictionary<string, object>? parameters = null);
     }
 }

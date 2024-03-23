@@ -21,7 +21,7 @@ namespace FlexMatrix.Api.Data.Repositories
             var query = $"SELECT * FROM {tableName} WHERE Id = @Id";
             var parameters = new Dictionary<string, object> { ["@Id"] = id };
 
-            var results = await _context.GetData(query, parameters);
+            var results = await _context.ExecuteSingleQuery(query, parameters);
             return results.Single();
         }
 
@@ -30,7 +30,7 @@ namespace FlexMatrix.Api.Data.Repositories
             var query = $"SELECT * FROM {tableName}";
             var parameters = new Dictionary<string, object> { ["@Id"] = tableName };
 
-            var results = await _context.GetData(query, parameters);
+            var results = await _context.ExecuteSingleQuery(query, parameters);
             return results;
         }
 
@@ -59,26 +59,6 @@ namespace FlexMatrix.Api.Data.Repositories
             var parameters = new Dictionary<string, object> { ["@Id"] = id };
 
             var result = await _context.ExecuteCommand(sql, parameters);
-            return result;
-        }
-
-        // ====================================================================================================
-
-        public async Task<bool> TableExist(string tableName)
-        {
-            var sql = "SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = @TableName";
-            var parameters = new Dictionary<string, object> { ["@TableName"] = tableName };
-
-            var result = await _context.ExecuteScalarCommand(sql, parameters);
-            return result;
-        }
-
-        public async Task<IEnumerable<Dictionary<string, object>>> GetAllTables()
-        {
-            var query = "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES";
-            var parameters = new Dictionary<string, object> { ["@TableName"] = "" };
-
-            var result = await _context.GetData(query, parameters);
             return result;
         }
     }
