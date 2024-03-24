@@ -15,6 +15,7 @@ namespace FlexMatrix.Api.Data.Repositories.StructureRepository
         {
             if (!await TableExist(tableName)) return null;
 
+            // do przerobienia bo  OBJECT_ID(@TableName) to chyba typowo dla mssql
             // zapytania:
             // kolumny
             // klucze główne i unikalne
@@ -61,8 +62,8 @@ namespace FlexMatrix.Api.Data.Repositories.StructureRepository
         {
             if (!await TableExist(tableStructure.TableName)) return false;
 
-            var sqlBuilder = new StringBuilder($"CREATE TABLE [dbo].[{tableStructure.TableName}] (");
-            AppendPrimaryKey(sqlBuilder, tableStructure.PrimaryKeyType);
+            var sqlBuilder = new StringBuilder($"CREATE TABLE [{TableSchema}].[{tableStructure.TableName}] (");
+            AppendPrimaryKey(sqlBuilder, tableStructure);
 
             foreach (var column in tableStructure.Columns)
             {
@@ -80,9 +81,9 @@ namespace FlexMatrix.Api.Data.Repositories.StructureRepository
 
             foreach (var column in tableStructure.Columns.Where(c => c.IsForeignKey))
             {
-                sqlBuilder.Append($@"ALTER TABLE [dbo].[{tableStructure.TableName}]
+                sqlBuilder.Append($@"ALTER TABLE [{TableSchema}].[{tableStructure.TableName}]
                     ADD CONSTRAINT FK_{tableStructure.TableName}_{column.Name}
-                    FOREIGN KEY ([{column.Name}]) REFERENCES [dbo].[{column.ReferencesTableName}](Id)");
+                    FOREIGN KEY ([{column.Name}]) REFERENCES [{TableSchema}].[{column.ReferencesTableName}]({column.ReferencesTablePrimaryKeyName})");
 
                 if (!string.IsNullOrWhiteSpace(column.DeleteType))
                     sqlBuilder.Append($" ON DELETE {column.DeleteType}");
@@ -103,7 +104,7 @@ namespace FlexMatrix.Api.Data.Repositories.StructureRepository
                 throw new InvalidOperationException($"Column '{column.Name}' already exists in table '{tableName}'.");
 
             var nullableSql = column.IsNullable ? "NULL" : "NOT NULL";
-            var sqlBuilder = new StringBuilder($"ALTER TABLE [dbo].[{tableName}] ADD [{column.Name}] {column.Type} {nullableSql}");
+            var sqlBuilder = new StringBuilder($"ALTER TABLE [{TableSchema}].[{tableName}] ADD [{column.Name}] {column.Type} {nullableSql}");
 
             if (!string.IsNullOrWhiteSpace(column.DefaultValue))
                 sqlBuilder.Append($" DEFAULT {column.DefaultValue}");
@@ -112,9 +113,9 @@ namespace FlexMatrix.Api.Data.Repositories.StructureRepository
 
             if (column.IsForeignKey)
             {
-                sqlBuilder.Append($@"ALTER TABLE [dbo].[{tableName}]
+                sqlBuilder.Append($@"ALTER TABLE [{TableSchema}].[{tableName}]
                     ADD CONSTRAINT FK_{tableName}_{column.Name}
-                    FOREIGN KEY ([{column.Name}]) REFERENCES [dbo].[{column.ReferencesTableName}](Id)");
+                    FOREIGN KEY ([{column.Name}]) REFERENCES [{TableSchema}].[{column.ReferencesTableName}]({column.ReferencesTablePrimaryKeyName})");
 
                 if (!string.IsNullOrWhiteSpace(column.DeleteType))
                     sqlBuilder.Append($" ON DELETE {column.DeleteType}");
@@ -137,12 +138,13 @@ namespace FlexMatrix.Api.Data.Repositories.StructureRepository
                 BEGIN
                     DECLARE @ConstraintName nvarchar(200);
                     SELECT @ConstraintName = CONSTRAINT_NAME FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE WHERE TABLE_NAME = '{tableName}' AND COLUMN_NAME = '{columnName}';
-                    EXEC('ALTER TABLE {tableName} DROP CONSTRAINT ' + @ConstraintName);
+                    EXEC('ALTER TABLE [{TableSchema}].[' + {tableName} + '] DROP CONSTRAINT ' + @ConstraintName);
                 END";
+
             await Context.ExecuteCommand(removeFKSql);
 
             // Następnie usuń kolumnę
-            var sql = $"ALTER TABLE {tableName} DROP COLUMN {columnName};";
+            var sql = $"ALTER TABLE [{TableSchema}].[{tableName}] DROP COLUMN [{columnName}];";
             var result = await Context.ExecuteCommand(sql);
             return result;
         }
@@ -150,10 +152,10 @@ namespace FlexMatrix.Api.Data.Repositories.StructureRepository
         public async Task<bool> DeleteTable(string tableName)
         {
             // Opcjonalnie: Usuń wszystkie klucze obce powiązane z tą tabelą
-            // To może być złożone i wymagać dodatkowej logiki
+            await RemoveRelations(tableName);
 
             // Usuń tabelę
-            var sql = $"DROP TABLE IF EXISTS {tableName};";
+            var sql = $"DROP TABLE IF EXISTS [{TableSchema}].[{tableName}];";
             var result = await Context.ExecuteCommand(sql);
             return result;
         }
@@ -163,12 +165,15 @@ namespace FlexMatrix.Api.Data.Repositories.StructureRepository
             var sql = $@"
                 DECLARE @sql NVARCHAR(MAX) = N'';
                 SELECT @sql += 'ALTER TABLE ' + QUOTENAME(TABLE_SCHEMA) + '.' + QUOTENAME(TABLE_NAME) 
-                            + ' DROP CONSTRAINT ' + QUOTENAME(CONSTRAINT_NAME) + '; '
+                             + ' DROP CONSTRAINT ' + QUOTENAME(CONSTRAINT_NAME) + '; '
                 FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS 
-                WHERE CONSTRAINT_TYPE = 'FOREIGN KEY' AND TABLE_NAME = '{tableName}';
+                WHERE CONSTRAINT_TYPE = 'FOREIGN KEY' 
+                AND TABLE_NAME = '{tableName}'
+                AND TABLE_SCHEMA = '{TableSchema}';
 
                 EXEC sp_executesql @sql;
                 ";
+
             var result = await Context.ExecuteCommand(sql);
             return result;
         }
@@ -178,24 +183,26 @@ namespace FlexMatrix.Api.Data.Repositories.StructureRepository
         // ==================== HELPERS ====================
         // =================================================
 
-        private static void AppendPrimaryKey(StringBuilder sqlBuilder, string primaryKeyType)
+
+        private static void AppendPrimaryKey(StringBuilder sqlBuilder, TableStructureDto tableStructure)
         {
-            switch (primaryKeyType.ToUpper())
+            var primaryKeyName = tableStructure.PrimaryKeyName;
+            switch (tableStructure.PrimaryKeyType.ToUpper())
             {
                 case "UNIQUEIDENTIFIER":
-                    sqlBuilder.Append("[Id] UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),");
+                    sqlBuilder.Append($"[{primaryKeyName}] UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),");
                     break;
                 case "INT":
-                    sqlBuilder.Append("[Id] INT PRIMARY KEY IDENTITY(1,1),");
+                    sqlBuilder.Append($"[{primaryKeyName}] INT PRIMARY KEY IDENTITY(1,1),");
                     break;
                 case "BIGINT":
-                    sqlBuilder.Append("[Id] BIGINT PRIMARY KEY IDENTITY(1,1),");
+                    sqlBuilder.Append($"[{primaryKeyName}] BIGINT PRIMARY KEY IDENTITY(1,1),");
                     break;
                 case "GUID":
-                    sqlBuilder.Append("[Id] UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),");
+                    sqlBuilder.Append($"[{primaryKeyName}] UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),");
                     break;
                 case "VARCHAR":
-                    sqlBuilder.Append("[Id] VARCHAR(36) PRIMARY KEY,");
+                    sqlBuilder.Append($"[{primaryKeyName}] VARCHAR(36) PRIMARY KEY,");
                     break;
                 default:
                     throw new NotImplementedException("Primary key type not implemented");

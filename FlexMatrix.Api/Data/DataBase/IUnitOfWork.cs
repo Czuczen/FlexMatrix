@@ -10,7 +10,7 @@ namespace FlexMatrix.Api.Data.DataBase
 
         Task<bool> ExecuteCommand(string sql, Dictionary<string, object>? parameters = null);
 
-        Task<bool> ExecuteScalarCommand(string sql, Dictionary<string, object>? parameters = null);
+        Task<object?> ExecuteScalarCommand(string sql, Dictionary<string, object>? parameters = null);
 
         Task BeginTransaction();
 

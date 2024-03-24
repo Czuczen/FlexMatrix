@@ -1,8 +1,8 @@
 ﻿using FlexMatrix.Api.Data.DataBase;
 using FlexMatrix.Api.Data.Repositories.CrudRepository;
 using FlexMatrix.Api.Data.Repositories.StructureRepository;
-using FlexMatrix.Api.Data.Services;
-using Microsoft.Extensions.DependencyInjection;
+using FlexMatrix.Api.Data.Services.CrudService;
+using FlexMatrix.Api.Data.Services.StructureService;
 
 namespace FlexMatrix.Api.Configuration;
 
@@ -19,6 +19,7 @@ public static class DependencyInjection
         builder.Services.AddScoped<ICrudRepository, CrudRepository>();
         builder.Services.AddScoped<IStructureRepository, StructureRepository>();
         builder.Services.AddScoped<IStructureService, StructureService>();
-        
+        builder.Services.AddScoped<ICrudService, CrudService>();
+
     }
 }

@@ -16,9 +16,13 @@
 
         public int? Scale { get; set; }
 
+
+
         public bool IsForeignKey { get; set; }
 
         public string? ReferencesTableName { get; set; }
+
+        public string? ReferencesTablePrimaryKeyName { get; set; }
 
         public string? DeleteType {  get; set; }
 

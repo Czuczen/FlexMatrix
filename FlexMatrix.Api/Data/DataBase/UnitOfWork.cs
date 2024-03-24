@@ -1,8 +1,6 @@
 ﻿using Microsoft.Data.SqlClient;
 using System.Data;
 using System.Data.Common;
-using System.Transactions;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace FlexMatrix.Api.Data.DataBase;
 
@@ -104,11 +102,8 @@ public sealed class UnitOfWork : IUnitOfWork
                 results.Add(objectsList);
                 queriesNumber--;
 
-                // Przejście do następnego zestawu wyników, jeśli są jeszcze zapytania do przetworzenia
                 if (queriesNumber > 0)
-                {
                     await reader.NextResultAsync();
-                }
             }
         }
 
@@ -146,7 +141,7 @@ public sealed class UnitOfWork : IUnitOfWork
         return result > 0;
     }
 
-    public async Task<bool> ExecuteScalarCommand(string sql, Dictionary<string, object>? parameters = null)
+    public async Task<object?> ExecuteScalarCommand(string sql, Dictionary<string, object>? parameters = null)
     {
         _logger.LogDebug("Executing scalar command. \nSql:" + sql);
 
@@ -168,12 +163,11 @@ public sealed class UnitOfWork : IUnitOfWork
             }
         }
 
-        // Jeśli znajdziemy tabelę, ExecuteScalar zwróci 1, w przeciwnym razie null
         var result = await command.ExecuteScalarAsync();
 
         _logger.LogDebug($"Scalar command executed. Result:{result} \nSql:{sql}");
 
-        return result != null;
+        return result;
     }
 
     private async Task OpenConnection()

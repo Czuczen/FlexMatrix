@@ -9,6 +9,9 @@ namespace FlexMatrix.Api.Data.Models
         public string TableName { get; set; }
 
         [SafeForSql]
+        public string PrimaryKeyName { get; set; }
+
+        [SafeForSql]
         public string PrimaryKeyType { get; set; }
 
         public IEnumerable<ColumnStructureDto> Columns { get; set; }

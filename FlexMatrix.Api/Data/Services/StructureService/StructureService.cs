@@ -1,8 +1,7 @@
 ﻿using FlexMatrix.Api.Data.Models;
-using FlexMatrix.Api.Data.Repositories;
 using FlexMatrix.Api.Data.Repositories.StructureRepository;
 
-namespace FlexMatrix.Api.Data.Services
+namespace FlexMatrix.Api.Data.Services.StructureService
 {
     public class StructureService : IStructureService
     {

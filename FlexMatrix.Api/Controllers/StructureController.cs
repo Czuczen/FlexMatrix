@@ -1,6 +1,5 @@
-﻿using FlexMatrix.Api.Data.DataBase;
-using FlexMatrix.Api.Data.Models;
-using FlexMatrix.Api.Data.Services;
+﻿using FlexMatrix.Api.Data.Models;
+using FlexMatrix.Api.Data.Services.StructureService;
 using Microsoft.AspNetCore.Mvc;
 using UnitOfWork = FlexMatrix.Api.Attributes.UnitOfWorkAttribute;
 
@@ -27,7 +26,6 @@ namespace FlexMatrix.Api.Controllers
         {
             if (ModelState.IsValid)
             {
-                var tableStr = await _structureService.GetTableStructure(tableStructure.TableName);
                 var result = await _structureService.CreateTableStructure(tableStructure);
                 if (result)
                 {
@@ -35,7 +33,7 @@ namespace FlexMatrix.Api.Controllers
                 }
                 else
                 {
-                    return StatusCode(500, "Internal server error: " + "empty");
+                    return StatusCode(500, "Internal server error: " + "eeeerrrrroooorrr");
                 }
             }
             else
@@ -43,43 +41,5 @@ namespace FlexMatrix.Api.Controllers
                 return BadRequest(ModelState);
             }
         }
-
-
-
-
-
-
-
-        //// GET: api/<StructureController>
-        //[HttpGet]
-        //public IEnumerable<string> Get()
-        //{
-        //    return new string[] { "value1", "value2" };
-        //}
-
-        //// GET api/<StructureController>/5
-        //[HttpGet("{id}")]
-        //public string Get(int id)
-        //{
-        //    return "value";
-        //}
-
-        //// POST api/<StructureController>
-        //[HttpPost]
-        //public void Post([FromBody] string value)
-        //{
-        //}
-
-        //// PUT api/<StructureController>/5
-        //[HttpPut("{id}")]
-        //public void Put(int id, [FromBody] string value)
-        //{
-        //}
-
-        //// DELETE api/<StructureController>/5
-        //[HttpDelete("{id}")]
-        //public void Delete(int id)
-        //{
-        //}
     }
 }

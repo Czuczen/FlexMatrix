@@ -1,6 +1,6 @@
 ﻿using FlexMatrix.Api.Data.Models;
 
-namespace FlexMatrix.Api.Data.Services
+namespace FlexMatrix.Api.Data.Services.StructureService
 {
     public interface IStructureService
     {

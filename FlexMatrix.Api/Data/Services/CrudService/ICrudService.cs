@@ -1,6 +1,6 @@
-﻿namespace FlexMatrix.Api.Data.Repositories.CrudRepository
+﻿namespace FlexMatrix.Api.Data.Services.CrudService
 {
-    public interface ICrudRepository : IRepository
+    public interface ICrudService
     {
         Task<Dictionary<string, object>> GetById(string tableName, int id);
 

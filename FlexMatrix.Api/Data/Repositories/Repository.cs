@@ -6,6 +6,11 @@ namespace FlexMatrix.Api.Data.Repositories
     {
         protected readonly IUnitOfWork Context;
 
+        protected string PrimaryKeyName { get; set; } = "Id";
+
+        protected string TableSchema { get; set; } = "dbo";
+
+
 
         public Repository(IUnitOfWork context)
         {
@@ -18,7 +23,7 @@ namespace FlexMatrix.Api.Data.Repositories
             var sql = @"IF EXISTS(
                             SELECT 1 
                             FROM INFORMATION_SCHEMA.COLUMNS 
-                            WHERE TABLE_SCHEMA = 'dbo' 
+                            WHERE TABLE_SCHEMA = @TableSchema 
                             AND TABLE_NAME = @TableName 
                             AND COLUMN_NAME = @ColumnName
                         )
@@ -26,8 +31,10 @@ namespace FlexMatrix.Api.Data.Repositories
                         ELSE
                         SELECT CAST(0 AS BIT);";
 
-            var parameters = new Dictionary<string, object> { ["TableName"] = tableName, ["ColumnName"] = columnName };
-            var result = await Context.ExecuteScalarCommand(sql, parameters);
+            var parameters = new Dictionary<string, object> { ["TableName"] = tableName, 
+                ["ColumnName"] = columnName, ["TableSchema"] = TableSchema };
+
+            var result = (bool) await Context.ExecuteScalarCommand(sql, parameters);
             return result;
         }
 
@@ -36,15 +43,15 @@ namespace FlexMatrix.Api.Data.Repositories
             var sql = @"IF EXISTS(
                             SELECT 1 
                             FROM INFORMATION_SCHEMA.TABLES 
-                            WHERE TABLE_SCHEMA = 'dbo' 
+                            WHERE TABLE_SCHEMA = @TableSchema
                             AND TABLE_NAME = @TableName
                         )
                         SELECT CAST(1 AS BIT);
                         ELSE
                         SELECT CAST(0 AS BIT);";
 
-            var parameters = new Dictionary<string, object> { ["TableName"] = tableName };
-            var result = await Context.ExecuteScalarCommand(sql, parameters);
+            var parameters = new Dictionary<string, object> { ["TableName"] = tableName, ["TableSchema"] = TableSchema };
+            var result = (bool) await Context.ExecuteScalarCommand(sql, parameters);
             return result;
         }
 
@@ -52,9 +59,11 @@ namespace FlexMatrix.Api.Data.Repositories
         {
             var query = @"SELECT TABLE_NAME 
                             FROM INFORMATION_SCHEMA.TABLES 
-                            WHERE TABLE_TYPE = 'BASE TABLE' AND TABLE_SCHEMA = 'dbo';";
+                            WHERE TABLE_TYPE = 'BASE TABLE' AND TABLE_SCHEMA = @TableSchema;";
 
-            var result = await Context.ExecuteSingleQuery(query);
+            var parameters = new Dictionary<string, object> { ["TableSchema"] = TableSchema };
+            var result = await Context.ExecuteSingleQuery(query, parameters);
+
             var tableNames = result.Select(dict => dict["TABLE_NAME"].ToString());
             return tableNames;
         }
