@@ -5,57 +5,55 @@ using System.Text;
 
 namespace FlexMatrix.Api.Data.Repositories.StructureRepository
 {
-    public class StructureRepository : IStructureRepository
+    public class StructureRepository : Repository, IStructureRepository
     {
-        private readonly IUnitOfWork _context;
-
-        public StructureRepository(IUnitOfWork context)
+        public StructureRepository(IUnitOfWork context) : base(context)
         {
-            _context = context;
         }
 
         public async Task<IEnumerable<IEnumerable<Dictionary<string, object>>>> GetTableStructure(string tableName)
         {
-            if (!await TableExist(tableStructure.TableName)) return false;
+            if (!await TableExist(tableName)) return null;
 
             // zapytania:
             // kolumny
             // klucze główne i unikalne
             // klucze obce
-            var query = @"SELECT c.name AS ColumnName, t.Name AS DataType
-                        FROM sys.columns c
-                        INNER JOIN sys.types t ON c.user_type_id = t.user_type_id
-                        WHERE c.object_id = OBJECT_ID(@TableName)
-                        ORDER BY c.column_id; 
+            var query = @"
+                SELECT c.name AS ColumnName, t.Name AS DataType
+                FROM sys.columns c
+                INNER JOIN sys.types t ON c.user_type_id = t.user_type_id
+                WHERE c.object_id = OBJECT_ID(@TableName)
+                ORDER BY c.column_id; 
 
-                        SELECT i.name AS IndexName, COL_NAME(ic.object_id, ic.column_id) AS ColumnName, i.is_primary_key, i.is_unique
-                        FROM sys.indexes AS i
-                        INNER JOIN sys.index_columns AS ic ON i.object_id = ic.object_id AND i.index_id = ic.index_id
-                        WHERE i.object_id = OBJECT_ID(@TableName);
+                SELECT i.name AS IndexName, COL_NAME(ic.object_id, ic.column_id) AS ColumnName, i.is_primary_key, i.is_unique
+                FROM sys.indexes AS i
+                INNER JOIN sys.index_columns AS ic ON i.object_id = ic.object_id AND i.index_id = ic.index_id
+                WHERE i.object_id = OBJECT_ID(@TableName);
 
-                        SELECT 
-                            fk.name AS ForeignKey,
-                            tp.name AS ParentTable,
-                            tr.name AS ReferenceTable,
-                            cp.name AS ParentColumn,
-                            cr.name AS ReferenceColumn
-                        FROM 
-                            sys.foreign_keys AS fk
-                        INNER JOIN 
-                            sys.tables AS tp ON fk.parent_object_id = tp.object_id
-                        INNER JOIN 
-                            sys.tables AS tr ON fk.referenced_object_id = tr.object_id
-                        INNER JOIN 
-                            sys.foreign_key_columns AS fkc ON fk.object_id = fkc.constraint_object_id
-                        INNER JOIN 
-                            sys.columns AS cp ON fkc.parent_object_id = cp.object_id AND fkc.parent_column_id = cp.column_id
-                        INNER JOIN 
-                            sys.columns AS cr ON fkc.referenced_object_id = cr.object_id AND fkc.referenced_column_id = cr.column_id
-                        WHERE 
-                            tp.name = @TableName;";
+                SELECT 
+                    fk.name AS ForeignKey,
+                    tp.name AS ParentTable,
+                    tr.name AS ReferenceTable,
+                    cp.name AS ParentColumn,
+                    cr.name AS ReferenceColumn
+                FROM 
+                    sys.foreign_keys AS fk
+                INNER JOIN 
+                    sys.tables AS tp ON fk.parent_object_id = tp.object_id
+                INNER JOIN 
+                    sys.tables AS tr ON fk.referenced_object_id = tr.object_id
+                INNER JOIN 
+                    sys.foreign_key_columns AS fkc ON fk.object_id = fkc.constraint_object_id
+                INNER JOIN 
+                    sys.columns AS cp ON fkc.parent_object_id = cp.object_id AND fkc.parent_column_id = cp.column_id
+                INNER JOIN 
+                    sys.columns AS cr ON fkc.referenced_object_id = cr.object_id AND fkc.referenced_column_id = cr.column_id
+                WHERE 
+                    tp.name = @TableName;";
 
             var parameters = new Dictionary<string, object> { ["TableName"] = tableName };
-            var result = await _context.ExecuteMultiQuery(query, 3, parameters);
+            var result = await Context.ExecuteMultiQuery(query, 3, parameters);
             return result;
         }
 
@@ -64,23 +62,20 @@ namespace FlexMatrix.Api.Data.Repositories.StructureRepository
             if (!await TableExist(tableStructure.TableName)) return false;
 
             var sqlBuilder = new StringBuilder($"CREATE TABLE [dbo].[{tableStructure.TableName}] (");
-
-            if (tableStructure.PrimaryKeyType == "UNIQUEIDENTIFIER")
-                sqlBuilder.Append("[Id] UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),");
-            else if (tableStructure.PrimaryKeyType == "INT")
-                sqlBuilder.Append("[Id] INT PRIMARY KEY IDENTITY(1,1),");
-            else if (tableStructure.PrimaryKeyType == "BIGINT")
-                sqlBuilder.Append("[Id] BIGINT PRIMARY KEY IDENTITY(1,1),");
-            else if (tableStructure.PrimaryKeyType == "GUID")
-                sqlBuilder.Append("[Id] UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),");
-            else if (tableStructure.PrimaryKeyType == "VARCHAR")
-                sqlBuilder.Append("[Id] VARCHAR(36) PRIMARY KEY,");
+            AppendPrimaryKey(sqlBuilder, tableStructure.PrimaryKeyType);
 
             foreach (var column in tableStructure.Columns)
-                sqlBuilder.Append($"[{column.Name}] {column.Type},");
+            {
+                var nullableSql = column.IsNullable ? "NULL" : "NOT NULL";
+                sqlBuilder.Append($"[{column.Name}] {column.Type} {nullableSql}");
 
-            // Remove a comma from the end of column definitions
-            sqlBuilder.Length--;
+                if (!string.IsNullOrWhiteSpace(column.DefaultValue))
+                    sqlBuilder.Append($" DEFAULT {column.DefaultValue}");
+
+                sqlBuilder.Append(",");
+            }
+
+            sqlBuilder.Length--; // Remove a comma from the end of column definitions
             sqlBuilder.Append(");");
 
             foreach (var column in tableStructure.Columns.Where(c => c.IsForeignKey))
@@ -89,177 +84,122 @@ namespace FlexMatrix.Api.Data.Repositories.StructureRepository
                     ADD CONSTRAINT FK_{tableStructure.TableName}_{column.Name}
                     FOREIGN KEY ([{column.Name}]) REFERENCES [dbo].[{column.ReferencesTableName}](Id)");
 
-                switch (column.DeleteType)
-                {
-                    case "CASCADE":
-                        sqlBuilder.Append(" ON DELETE CASCADE");
-                        break;
-                    case "SET NULL":
-                        sqlBuilder.Append(" ON DELETE SET NULL");
-                        break;
-                    case "SET DEFAULT":
-                        sqlBuilder.Append(" ON DELETE SET DEFAULT");
-                        break;
-                    case "NO ACTION":
-                        sqlBuilder.Append(" ON DELETE NO ACTION");
-                        break;
-                    case "RESTRICT":
-                        sqlBuilder.Append(" ON DELETE RESTRICT");
-                        break;
-                }
+                if (!string.IsNullOrWhiteSpace(column.DeleteType))
+                    sqlBuilder.Append($" ON DELETE {column.DeleteType}");
 
-                switch (column.UpdateType)
-                {
-                    case "CASCADE":
-                        sqlBuilder.Append(" ON UPDATE CASCADE");
-                        break;
-                    case "SET NULL":
-                        sqlBuilder.Append(" ON UPDATE SET NULL");
-                        break;
-                    case "SET DEFAULT":
-                        sqlBuilder.Append(" ON UPDATE SET DEFAULT");
-                        break;
-                    case "NO ACTION":
-                        sqlBuilder.Append(" ON UPDATE NO ACTION");
-                        break;
-                    case "RESTRICT":
-                        sqlBuilder.Append(" ON UPDATE RESTRICT");
-                        break;
-                }
+                if (!string.IsNullOrWhiteSpace(column.UpdateType))
+                    sqlBuilder.Append($" ON UPDATE {column.UpdateType}");
 
                 sqlBuilder.Append(";");
             }
 
-            var result = await _context.ExecuteCommand(sqlBuilder.ToString());
+            var result = await Context.ExecuteCommand(sqlBuilder.ToString());
             return result;
         }
 
-        // ======================
-
-        public async Task<bool> AddColumn(string tableName, string columnName, string dataType, string? defaultValue = null, bool isNullable = true, ForeignKeyConstraint? foreignKey = null)
+        public async Task<bool> AddColumnStructure(ColumnStructureDto column, string tableName)
         {
-            if (await ColumnExist(tableName, columnName))
-            {
-                throw new InvalidOperationException($"Column '{columnName}' already exists in table '{tableName}'.");
-            }
+            if (await ColumnExist(tableName, column.Name))
+                throw new InvalidOperationException($"Column '{column.Name}' already exists in table '{tableName}'.");
 
-            var nullableSql = isNullable ? "NULL" : "NOT NULL";
-            var sqlBuilder = new StringBuilder($"ALTER TABLE [dbo].[{tableName}] ADD [{columnName}] {dataType} {nullableSql}");
+            var nullableSql = column.IsNullable ? "NULL" : "NOT NULL";
+            var sqlBuilder = new StringBuilder($"ALTER TABLE [dbo].[{tableName}] ADD [{column.Name}] {column.Type} {nullableSql}");
 
-            // Dodanie wartości domyślnej, jeśli jest określona
-            if (!string.IsNullOrEmpty(defaultValue))
-            {
-                sqlBuilder.Append($" DEFAULT {defaultValue}");
-            }
+            if (!string.IsNullOrWhiteSpace(column.DefaultValue))
+                sqlBuilder.Append($" DEFAULT {column.DefaultValue}");
 
             sqlBuilder.Append(";");
 
-            // Dodanie klucza obcego, jeśli został określony
-            if (foreignKey != null)
+            if (column.IsForeignKey)
             {
-                sqlBuilder.Append($@"
-            ALTER TABLE [dbo].[{tableName}]
-            ADD CONSTRAINT FK_{tableName}_{columnName}
-            FOREIGN KEY ([{columnName}]) REFERENCES [dbo].[{foreignKey.ReferencesTableName}](Id)");
+                sqlBuilder.Append($@"ALTER TABLE [dbo].[{tableName}]
+                    ADD CONSTRAINT FK_{tableName}_{column.Name}
+                    FOREIGN KEY ([{column.Name}]) REFERENCES [dbo].[{column.ReferencesTableName}](Id)");
 
-                // Obsługa różnych strategii usuwania
-                if (!string.IsNullOrEmpty(foreignKey.DeleteAction))
-                {
-                    sqlBuilder.Append($" ON DELETE {foreignKey.DeleteAction}");
-                }
+                if (!string.IsNullOrWhiteSpace(column.DeleteType))
+                    sqlBuilder.Append($" ON DELETE {column.DeleteType}");
 
-                // Obsługa różnych strategii aktualizacji
-                if (!string.IsNullOrEmpty(foreignKey.UpdateAction))
-                {
-                    sqlBuilder.Append($" ON UPDATE {foreignKey.UpdateAction}");
-                }
+                if (!string.IsNullOrWhiteSpace(column.UpdateType))
+                    sqlBuilder.Append($" ON UPDATE {column.UpdateType}");
 
                 sqlBuilder.Append(";");
             }
 
-            var result = await _context.ExecuteCommand(sqlBuilder.ToString());
+            var result = await Context.ExecuteCommand(sqlBuilder.ToString());
             return result;
         }
 
-        // Klasa pomocnicza dla ograniczenia klucza obcego
-        public class ForeignKeyConstraint
+        public async Task<bool> RemoveColumn(string tableName, string columnName)
         {
-            public string ReferencesTableName { get; set; }
-            public string DeleteAction { get; set; }
-            public string UpdateAction { get; set; }
-        }
+            // Najpierw usuń relacje dla tej kolumny, jeśli istnieją
+            var removeFKSql = $@"
+                IF EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE WHERE TABLE_NAME = '{tableName}' AND COLUMN_NAME = '{columnName}')
+                BEGIN
+                    DECLARE @ConstraintName nvarchar(200);
+                    SELECT @ConstraintName = CONSTRAINT_NAME FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE WHERE TABLE_NAME = '{tableName}' AND COLUMN_NAME = '{columnName}';
+                    EXEC('ALTER TABLE {tableName} DROP CONSTRAINT ' + @ConstraintName);
+                END";
+            await Context.ExecuteCommand(removeFKSql);
 
-        // ======================
-
-
-        public async Task<bool> AddColumn(string tableName, string columnName, string dataType)
-        {
-            // check column existance
-
-            var sql = $"ALTER TABLE {tableName} ADD {columnName} {dataType}";
-
-            var result = await _context.ExecuteCommand(sql);
+            // Następnie usuń kolumnę
+            var sql = $"ALTER TABLE {tableName} DROP COLUMN {columnName};";
+            var result = await Context.ExecuteCommand(sql);
             return result;
         }
 
-        public async Task<bool> RemoveColumn()
+        public async Task<bool> DeleteTable(string tableName)
         {
-            var sql = $"";
+            // Opcjonalnie: Usuń wszystkie klucze obce powiązane z tą tabelą
+            // To może być złożone i wymagać dodatkowej logiki
 
-
-            // jeśli kolumna relacyjna to usunąć relację?
-            var result = await _context.ExecuteCommand(sql);
+            // Usuń tabelę
+            var sql = $"DROP TABLE IF EXISTS {tableName};";
+            var result = await Context.ExecuteCommand(sql);
             return result;
         }
 
-        public async Task<bool> DeleteTable()
+        public async Task<bool> RemoveRelations(string tableName)
         {
-            var sql = $"";
+            var sql = $@"
+                DECLARE @sql NVARCHAR(MAX) = N'';
+                SELECT @sql += 'ALTER TABLE ' + QUOTENAME(TABLE_SCHEMA) + '.' + QUOTENAME(TABLE_NAME) 
+                            + ' DROP CONSTRAINT ' + QUOTENAME(CONSTRAINT_NAME) + '; '
+                FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS 
+                WHERE CONSTRAINT_TYPE = 'FOREIGN KEY' AND TABLE_NAME = '{tableName}';
 
-            // alter table relayjne też usunąć?
-            var result = await _context.ExecuteCommand(sql);
-            return result;
-        }
-
-        public async Task<bool> RemoveRelations()
-        {
-            var sql = $"";
-
-            var result = await _context.ExecuteCommand(sql);
+                EXEC sp_executesql @sql;
+                ";
+            var result = await Context.ExecuteCommand(sql);
             return result;
         }
 
 
+        // =================================================
+        // ==================== HELPERS ====================
+        // =================================================
 
-        // ============================================================================================================
-        // ============================================================================================================
-        // ============================================================================================================
-
-
-        private async Task<bool> ColumnExist(string tableName, string columnName)
+        private static void AppendPrimaryKey(StringBuilder sqlBuilder, string primaryKeyType)
         {
-            var sql = @"IF EXISTS(SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = @TableName AND COLUMN_NAME = @ColumnName) SELECT 1 ELSE SELECT 0";
-            var parameters = new Dictionary<string, object> { ["TableName"] = tableName, ["ColumnName"] = columnName };
-
-            var result = await _context.ExecuteScalarCommand(sql, parameters);
-            return result;
-        }
-
-        private async Task<bool> TableExist(string tableName)
-        {
-            var sql = "SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = @TableName";
-            var parameters = new Dictionary<string, object> { ["TableName"] = tableName };
-
-            var result = await _context.ExecuteScalarCommand(sql, parameters);
-            return result;
-        }
-
-        private async Task<IEnumerable<Dictionary<string, object>>> GetAllTables()
-        {
-            var query = "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES";
-
-            var result = await _context.ExecuteSingleQuery(query);
-            return result;
+            switch (primaryKeyType.ToUpper())
+            {
+                case "UNIQUEIDENTIFIER":
+                    sqlBuilder.Append("[Id] UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),");
+                    break;
+                case "INT":
+                    sqlBuilder.Append("[Id] INT PRIMARY KEY IDENTITY(1,1),");
+                    break;
+                case "BIGINT":
+                    sqlBuilder.Append("[Id] BIGINT PRIMARY KEY IDENTITY(1,1),");
+                    break;
+                case "GUID":
+                    sqlBuilder.Append("[Id] UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),");
+                    break;
+                case "VARCHAR":
+                    sqlBuilder.Append("[Id] VARCHAR(36) PRIMARY KEY,");
+                    break;
+                default:
+                    throw new NotImplementedException("Primary key type not implemented");
+            }
         }
     }
 }

@@ -22,6 +22,8 @@ public sealed class UnitOfWork : IUnitOfWork
 
     public async Task<IEnumerable<Dictionary<string, object>>> ExecuteSingleQuery(string query, Dictionary<string, object>? parameters = null)
     {
+        _logger.LogDebug("Executing single query. \nQuery:" + query);
+
         var results = new List<Dictionary<string, object>>();
 
         using (var command = _connection.CreateCommand())
@@ -53,12 +55,17 @@ public sealed class UnitOfWork : IUnitOfWork
                 results.Add(row);
             }
         }
+
+        _logger.LogDebug($"Single query executed. Result:{results.Count} \nQuery:{query}");
+
         return results;
     }
 
     public async Task<IEnumerable<IEnumerable<Dictionary<string, object>>>> ExecuteMultiQuery(string query, int queriesNumber, 
         Dictionary<string, object>? parameters = null)
     {
+        _logger.LogDebug("Executing multi query. \nQuery:" + query);
+
         var results = new List<List<Dictionary<string, object>>>();
 
         using (var command = _connection.CreateCommand())
@@ -105,11 +112,15 @@ public sealed class UnitOfWork : IUnitOfWork
             }
         }
 
+        _logger.LogDebug($"Multi query executed. Result:{results.Count} \nQuery:{query}");
+
         return results;
     }
 
     public async Task<bool> ExecuteCommand(string sql, Dictionary<string, object>? parameters = null)
     {
+        _logger.LogDebug("Executing command. \nSql:" + sql);
+
         if (_transaction == null)
             throw new InvalidOperationException("The transaction has not been opened.");
 
@@ -129,11 +140,16 @@ public sealed class UnitOfWork : IUnitOfWork
         }
 
         var result = await command.ExecuteNonQueryAsync();
+
+        _logger.LogDebug($"Command executed. Result:{result} \nSql:{sql}");
+
         return result > 0;
     }
 
     public async Task<bool> ExecuteScalarCommand(string sql, Dictionary<string, object>? parameters = null)
     {
+        _logger.LogDebug("Executing scalar command. \nSql:" + sql);
+
         if (_transaction == null)
             throw new InvalidOperationException("The transaction has not been opened.");
 
@@ -154,6 +170,9 @@ public sealed class UnitOfWork : IUnitOfWork
 
         // Jeśli znajdziemy tabelę, ExecuteScalar zwróci 1, w przeciwnym razie null
         var result = await command.ExecuteScalarAsync();
+
+        _logger.LogDebug($"Scalar command executed. Result:{result} \nSql:{sql}");
+
         return result != null;
     }
 

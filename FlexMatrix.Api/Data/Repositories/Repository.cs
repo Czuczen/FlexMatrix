@@ -1,65 +1,63 @@
 ﻿using FlexMatrix.Api.Data.DataBase;
-using Microsoft.Data.SqlClient;
-using Microsoft.Extensions.Configuration;
-using System.Data.Common;
 
 namespace FlexMatrix.Api.Data.Repositories
 {
-    public class Repository : IRepository
+    public abstract class Repository
     {
-        private readonly IUnitOfWork _context;
+        protected readonly IUnitOfWork Context;
 
 
         public Repository(IUnitOfWork context)
         {
-            _context = context;
+            Context = context;
         }
 
 
-        public async Task<Dictionary<string, object>> GetById(string tableName, int id)
+        public async Task<bool> ColumnExist(string tableName, string columnName)
         {
-            var query = $"SELECT * FROM {tableName} WHERE Id = @Id";
-            var parameters = new Dictionary<string, object> { ["@Id"] = id };
+            var sql = @"IF EXISTS(
+                            SELECT 1 
+                            FROM INFORMATION_SCHEMA.COLUMNS 
+                            WHERE TABLE_SCHEMA = 'dbo' 
+                            AND TABLE_NAME = @TableName 
+                            AND COLUMN_NAME = @ColumnName
+                        )
+                        SELECT CAST(1 AS BIT);
+                        ELSE
+                        SELECT CAST(0 AS BIT);";
 
-            var results = await _context.ExecuteSingleQuery(query, parameters);
-            return results.Single();
-        }
-
-        public async Task<IEnumerable<Dictionary<string, object>>> GetAll(string tableName)
-        {
-            var query = $"SELECT * FROM {tableName}";
-            var parameters = new Dictionary<string, object> { ["@Id"] = tableName };
-
-            var results = await _context.ExecuteSingleQuery(query, parameters);
-            return results;
-        }
-
-        public async Task<bool> Create(string tableName, Dictionary<string, object> columnValues)
-        {
-            var columns = string.Join(", ", columnValues.Keys);
-            var parameters = string.Join(", ", columnValues.Keys.Select(k => "@" + k));
-            var sql = $"INSERT INTO {tableName} ({columns}) VALUES ({parameters})";
-
-            var result = await _context.ExecuteCommand(sql, columnValues);
+            var parameters = new Dictionary<string, object> { ["TableName"] = tableName, ["ColumnName"] = columnName };
+            var result = await Context.ExecuteScalarCommand(sql, parameters);
             return result;
         }
 
-        public async Task<bool> Update(string tableName, int id, Dictionary<string, object> columnValues)
+        public async Task<bool> TableExist(string tableName)
         {
-            var setClause = string.Join(", ", columnValues.Keys.Select(k => $"{k} = @{k}"));
-            var sql = $"UPDATE {tableName} SET {setClause} WHERE Id = @Id";
+            var sql = @"IF EXISTS(
+                            SELECT 1 
+                            FROM INFORMATION_SCHEMA.TABLES 
+                            WHERE TABLE_SCHEMA = 'dbo' 
+                            AND TABLE_NAME = @TableName
+                        )
+                        SELECT CAST(1 AS BIT);
+                        ELSE
+                        SELECT CAST(0 AS BIT);";
 
-            var results = await _context.ExecuteCommand(sql, columnValues);
-            return results;
-        }
-
-        public async Task<bool> Delete(string tableName, int id)
-        {
-            var sql = $"DELETE FROM {tableName} WHERE Id = @Id";
-            var parameters = new Dictionary<string, object> { ["@Id"] = id };
-
-            var result = await _context.ExecuteCommand(sql, parameters);
+            var parameters = new Dictionary<string, object> { ["TableName"] = tableName };
+            var result = await Context.ExecuteScalarCommand(sql, parameters);
             return result;
         }
+
+        public async Task<IEnumerable<string>> GetTableNames()
+        {
+            var query = @"SELECT TABLE_NAME 
+                            FROM INFORMATION_SCHEMA.TABLES 
+                            WHERE TABLE_TYPE = 'BASE TABLE' AND TABLE_SCHEMA = 'dbo';";
+
+            var result = await Context.ExecuteSingleQuery(query);
+            var tableNames = result.Select(dict => dict["TABLE_NAME"].ToString());
+            return tableNames;
+        }
+
     }
 }

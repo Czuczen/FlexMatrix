@@ -1,5 +1,5 @@
 ﻿using FlexMatrix.Api.Data.DataBase;
-using FlexMatrix.Api.Data.Repositories;
+using FlexMatrix.Api.Data.Repositories.CrudRepository;
 using FlexMatrix.Api.Data.Repositories.StructureRepository;
 using FlexMatrix.Api.Data.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -16,7 +16,7 @@ public static class DependencyInjection
             builder.Configuration.GetConnectionString("DefaultConnection")));
 
         
-        builder.Services.AddScoped<IRepository, Repository>();
+        builder.Services.AddScoped<ICrudRepository, CrudRepository>();
         builder.Services.AddScoped<IStructureRepository, StructureRepository>();
         builder.Services.AddScoped<IStructureService, StructureService>();
         
