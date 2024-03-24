@@ -12,13 +12,14 @@ namespace FlexMatrix.Api.Controllers
     {
         private readonly ICrudService _crudService;
 
+
         public CrudController(ICrudService crudService)
         {
             _crudService = crudService;
         }
 
 
-        [HttpGet(Name = "GetById")]
+        [HttpGet("GetById/{id}", Name = "GetById")]
         [UnitOfWork]
         public async Task<IActionResult> Get(string tableName, int id)
         {
@@ -34,7 +35,7 @@ namespace FlexMatrix.Api.Controllers
             }
         }
 
-        [HttpGet(Name = "GetAll")]
+        [HttpGet("GetAll", Name = "GetAll")]
         [UnitOfWork]
         public async Task<IActionResult> GetAll(string tableName)
         {
@@ -50,7 +51,7 @@ namespace FlexMatrix.Api.Controllers
             }
         }
 
-        [HttpPost]
+        [HttpPost("Create")]
         [UnitOfWork]
         public async Task<IActionResult> Create(string tableName, Dictionary<string, object> creationObject)
         {
@@ -66,7 +67,7 @@ namespace FlexMatrix.Api.Controllers
             }
         }
 
-        [HttpPost]
+        [HttpPost("Update")]
         [UnitOfWork]
         public async Task<IActionResult> Update(string tableName, Dictionary<string, object> updatingObject)
         {
@@ -82,7 +83,7 @@ namespace FlexMatrix.Api.Controllers
             }
         }
 
-        [HttpPost]
+        [HttpPost("Delete/{id}")]
         [UnitOfWork]
         public async Task<IActionResult> Delete(string tableName, int id)
         {

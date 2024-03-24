@@ -3,8 +3,6 @@ using FlexMatrix.Api.Data.Services.StructureService;
 using Microsoft.AspNetCore.Mvc;
 using UnitOfWork = FlexMatrix.Api.Attributes.UnitOfWorkAttribute;
 
-// For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-
 namespace FlexMatrix.Api.Controllers
 {
     [Route("api/[controller]")]
@@ -21,7 +19,7 @@ namespace FlexMatrix.Api.Controllers
 
 
         [UnitOfWork]
-        [HttpPost(Name = "CreateNewTableStructure")]
+        [HttpPost("CreateTableStructure")]
         public async Task<IActionResult> CreateNewTableStructure(TableStructureDto tableStructure)
         {
             if (ModelState.IsValid)
