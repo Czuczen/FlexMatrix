@@ -43,7 +43,7 @@ public sealed class UnitOfWork : IUnitOfWork
                 {
                     var parameter = command.CreateParameter();
                     parameter.ParameterName = $"@{param.Item1}";
-                    parameter.Value = param.Item3 != null ? _parser.Parse(ParseStrategies.ToDb, param.Item2, param.Item3) : DBNull.Value;
+                    parameter.Value = param.Item3 != null ? _parser.Parse(ParseStrategies.FromDb, param.Item2, param.Item3) : DBNull.Value;
                     command.Parameters.Add(parameter);
                 }
             }
@@ -85,7 +85,7 @@ public sealed class UnitOfWork : IUnitOfWork
                 {
                     var parameter = command.CreateParameter();
                     parameter.ParameterName = $"@{param.Item1}";
-                    parameter.Value = param.Item3 != null ? _parser.Parse(ParseStrategies.ToDb, param.Item2, param.Item3) : DBNull.Value;
+                    parameter.Value = param.Item3 != null ? _parser.Parse(ParseStrategies.FromDb, param.Item2, param.Item3) : DBNull.Value;
                     command.Parameters.Add(parameter);
                 }
             }

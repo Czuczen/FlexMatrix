@@ -26,7 +26,7 @@ namespace FlexMatrix.Api.Data.Repositories
 
             foreach (var param in dictParameters)
                 ret.Add(new Tuple<string, string, object>(tableName, columnsInfo.Single(c =>
-                        c["ColumnName"] == param.Key)["DataType"].ToString(), param.Value));
+                    c["ColumnName"].ToString() == param.Key)["DataType"].ToString(), param.Value));
 
             return ret; ;
         }
@@ -46,9 +46,9 @@ namespace FlexMatrix.Api.Data.Repositories
 
             var parameters = new List<Tuple<string, string, object>>
             {
-                new Tuple<string, string, object>("TableName", ParseTypes.String, tableName),
-                new Tuple<string, string, object>("ColumnName", ParseTypes.String, columnName),
-                new Tuple<string, string, object>("TableSchema", ParseTypes.String, TableSchema)
+                new Tuple<string, string, object>("TableName", SqlTypes.VarChar, tableName),
+                new Tuple<string, string, object>("ColumnName", SqlTypes.VarChar, columnName),
+                new Tuple<string, string, object>("TableSchema", SqlTypes.VarChar, TableSchema)
             };
 
             var result = (bool) await Context.ExecuteScalarCommand(sql, parameters);
@@ -69,8 +69,8 @@ namespace FlexMatrix.Api.Data.Repositories
 
             var parameters = new List<Tuple<string, string, object>>
             {
-                new Tuple<string, string, object>("TableName", ParseTypes.String, tableName),
-                new Tuple<string, string, object>("TableSchema", ParseTypes.String, TableSchema)
+                new Tuple<string, string, object>("TableName", SqlTypes.VarChar, tableName),
+                new Tuple<string, string, object>("TableSchema", SqlTypes.VarChar, TableSchema)
             };
 
             var result = (bool) await Context.ExecuteScalarCommand(sql, parameters);
@@ -83,7 +83,7 @@ namespace FlexMatrix.Api.Data.Repositories
                             FROM INFORMATION_SCHEMA.TABLES 
                             WHERE TABLE_TYPE = 'BASE TABLE' AND TABLE_SCHEMA = @TableSchema;";
 
-            var parameters = new List<Tuple<string, string, object>>{ new Tuple<string, string, object>("TableSchema", ParseTypes.String, TableSchema) };
+            var parameters = new List<Tuple<string, string, object>>{ new Tuple<string, string, object>("TableSchema", SqlTypes.VarChar, TableSchema) };
             var result = await Context.ExecuteSingleQuery(query, parameters);
 
             var tableNames = result.Select(dict => dict["TABLE_NAME"].ToString());
@@ -97,7 +97,7 @@ namespace FlexMatrix.Api.Data.Repositories
                             WHERE TABLE_NAME = @TableName
                             ORDER BY ORDINAL_POSITION;";
 
-            var parameters = new List<Tuple<string, string, object>>{ new Tuple<string, string, object>("TableName", ParseTypes.String, tableName) };
+            var parameters = new List<Tuple<string, string, object>>{ new Tuple<string, string, object>("TableName", SqlTypes.VarChar, tableName) };
             var columns = await Context.ExecuteSingleQuery(query, parameters);
             return columns;
         }
@@ -113,7 +113,7 @@ namespace FlexMatrix.Api.Data.Repositories
                         JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE AS kcu ON tc.CONSTRAINT_NAME = kcu.CONSTRAINT_NAME
                         WHERE tc.TABLE_NAME = @TableName;";
 
-            var parameters = new List<Tuple<string, string, object>>{ new Tuple<string, string, object>("TableName", ParseTypes.String, tableName) };
+            var parameters = new List<Tuple<string, string, object>>{ new Tuple<string, string, object>("TableName", SqlTypes.VarChar, tableName) };
             var indexes = await Context.ExecuteSingleQuery(query, parameters);
             return indexes;
         }
@@ -133,7 +133,7 @@ namespace FlexMatrix.Api.Data.Repositories
                         WHERE 
                             fk.TABLE_NAME = @TableName;";
 
-            var parameters = new List<Tuple<string, string, object>>{ new Tuple<string, string, object>("TableName", ParseTypes.String, tableName) };
+            var parameters = new List<Tuple<string, string, object>>{ new Tuple<string, string, object>("TableName", SqlTypes.VarChar, tableName) };
             var foreignKeys = await Context.ExecuteSingleQuery(query, parameters);
             return foreignKeys;
         }

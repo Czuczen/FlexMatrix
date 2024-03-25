@@ -7,7 +7,7 @@ namespace FlexMatrix.Api.Data.Parser.Strategies
 {
     public class FromDbParser : IParserStrategy
     {
-        public string StrategyName { get; set; } = ParseStrategies.FromDb;
+        public string StrategyName => ParseStrategies.FromDb;
 
 
         public object? Parse(string valueType, object? value)
@@ -16,43 +16,49 @@ namespace FlexMatrix.Api.Data.Parser.Strategies
 
             var cultureInfo = CultureInfo.InvariantCulture;
 
-            switch (valueType)
+            switch (valueType.ToUpper())
             {
-                case ParseTypes.Int:
-                    return Convert.ToInt32(value, cultureInfo);
-                case ParseTypes.Long:
+                case SqlTypes.Int:
+                case SqlTypes.SmallInt:
+                case SqlTypes.TinyInt:
+                case SqlTypes.BigInt:
                     return Convert.ToInt64(value, cultureInfo);
-                case ParseTypes.String:
-                    return value.ToString();
-                case ParseTypes.Double:
+                case SqlTypes.Float:
+                case SqlTypes.Real:
                     return Convert.ToDouble(value, cultureInfo);
-                case ParseTypes.Decimal:
+                case SqlTypes.Decimal:
+                case SqlTypes.Numeric:
+                case SqlTypes.Money:
+                case SqlTypes.SmallMoney:
                     return Convert.ToDecimal(value, cultureInfo);
-                case ParseTypes.Boolean:
+                case SqlTypes.Bit:
                     return Convert.ToBoolean(value, cultureInfo);
-                case ParseTypes.DateTime:
+                case SqlTypes.DateTime:
+                case SqlTypes.Date:
+                case SqlTypes.DateTime2:
+                case SqlTypes.SmallDateTime:
                     return DateTime.Parse(value.ToString(), cultureInfo, DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal);
-                case ParseTypes.Guid:
+                    //return Convert.ToDateTime(value, cultureInfo);
+                case SqlTypes.Time:
+                    return TimeSpan.Parse(value.ToString(), cultureInfo);
+                case SqlTypes.UniqueIdentifier:
                     return Guid.Parse(value.ToString());
-                case ParseTypes.Byte:
-                    return Convert.ToByte(value, cultureInfo);
-                case ParseTypes.ByteArray:
+                case SqlTypes.Char:
+                case SqlTypes.VarChar:
+                case SqlTypes.Text:
+                case SqlTypes.NChar:
+                case SqlTypes.NVarChar:
+                case SqlTypes.NText:
+                    return value.ToString();
+                case SqlTypes.VarBinary:
+                case SqlTypes.Image:
                     return Convert.FromBase64String(value.ToString());
                     //return value is byte[] byteArrayValue ? byteArrayValue : null;
-                case ParseTypes.TimeSpan:
-                    return TimeSpan.Parse(value.ToString(), cultureInfo);
-                case ParseTypes.Char:
-                    return Convert.ToChar(value, cultureInfo);
-                case ParseTypes.Enum:
-                    return Convert.ToInt32(value, cultureInfo);
-                    // return (YourEnumType)Enum.Parse(typeof(YourEnumType), dbValue.ToString());
-                case ParseTypes.DateTimeOffset:
+                case SqlTypes.DateTimeOffset:
                     return DateTimeOffset.Parse(value.ToString(), cultureInfo, DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal);
-                case ParseTypes.Uri:
-                    return Uri.TryCreate(value.ToString(), UriKind.Absolute, out Uri uriValue) ? uriValue : null;
-                case ParseTypes.Json:
-                    var options = new JsonSerializerOptions { WriteIndented = true, Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
-                    return JsonSerializer.Serialize(value, options);
+                case SqlTypes.Xml:
+                case SqlTypes.Json:
+                    return value.ToString();
                 default:
                     throw new ArgumentOutOfRangeException(nameof(valueType), valueType, "This type is not supported.");
             }
