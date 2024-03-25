@@ -2,6 +2,6 @@
 {
     public interface IParser
     {
-        object Parse(string strategyName, string valueType, object value);
+        object? Parse(string strategyName, string valueType, object value);
     }
 }

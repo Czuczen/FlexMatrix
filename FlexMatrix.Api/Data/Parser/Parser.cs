@@ -14,11 +14,11 @@ namespace FlexMatrix.Api.Data.Parser
             _parseStrategies = parseStrategies;
         }
 
-        public object Parse(string strategyName, string valueType, object value)
+        public object? Parse(string strategyName, string valueType, object value)
         {
-            _parseStrategies.Single(s => s.StrategyName == strategyName).Parse(valueType, value);
+            var parsedValue = _parseStrategies.Single(s => s.StrategyName == strategyName).Parse(valueType, value);
 
-            return value;
+            return parsedValue;
         }
 
         public static T ConvertFromJsonElement<T>(JsonElement element)

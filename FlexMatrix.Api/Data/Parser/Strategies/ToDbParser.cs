@@ -3,7 +3,6 @@ using System;
 using System.Globalization;
 using System.Text.Encodings.Web;
 using System.Text.Json;
-using System.Xml.Linq;
 
 namespace FlexMatrix.Api.Data.Parser.Strategies
 {
@@ -25,25 +24,22 @@ namespace FlexMatrix.Api.Data.Parser.Strategies
                 case SqlTypes.SmallInt:
                 case SqlTypes.TinyInt:
                 case SqlTypes.BigInt:
-                    //value = value is JsonElement element ? Parser.ConvertFromJsonElement<long>(element) : value;
-                    return ((JsonElement)value).GetInt64();
-                    //return Convert.ToInt64(value.ToString(), cultureInfo);
+                    return long.Parse(value.ToString(), cultureInfo);
                 case SqlTypes.Float:
                 case SqlTypes.Real:
-                    return Convert.ToDouble(value, cultureInfo);
+                    return double.Parse(value.ToString(), cultureInfo);
                 case SqlTypes.Decimal:
                 case SqlTypes.Numeric:
                 case SqlTypes.Money:
                 case SqlTypes.SmallMoney:
-                    return Convert.ToDecimal(value, cultureInfo);
+                    return decimal.Parse(value.ToString(), cultureInfo);
                 case SqlTypes.Bit:
-                    return Convert.ToBoolean(value, cultureInfo);
+                    return bool.Parse(value.ToString());
                 case SqlTypes.DateTime:
                 case SqlTypes.Date:
                 case SqlTypes.DateTime2:
                 case SqlTypes.SmallDateTime:
                     return DateTime.Parse(value.ToString(), cultureInfo, DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal);
-                    //return Convert.ToDateTime(value, cultureInfo);
                 case SqlTypes.Time:
                     return TimeSpan.Parse(value.ToString(), cultureInfo);
                 case SqlTypes.UniqueIdentifier:

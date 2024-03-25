@@ -25,7 +25,7 @@ namespace FlexMatrix.Api.Data.Repositories
             var columnsInfo = await GetColumnNamesWithTypes(tableName);
 
             foreach (var param in dictParameters)
-                ret.Add(new Tuple<string, string, object>(tableName, columnsInfo.Single(c =>
+                ret.Add(new Tuple<string, string, object>(param.Key, columnsInfo.Single(c =>
                     c["ColumnName"].ToString() == param.Key)["DataType"].ToString(), param.Value));
 
             return ret; ;
