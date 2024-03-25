@@ -2,10 +2,8 @@
 
 namespace FlexMatrix.Api.Data.Repositories.StructureRepository
 {
-    public interface IStructureRepository : IRepository
+    public interface IStructureRepository
     {
-        Task<IEnumerable<IEnumerable<Dictionary<string, object>>>> GetTableStructure(string tableName);
-
         Task<bool> CreateTableStructure(TableStructureDto tableStructure);
 
         Task<bool> AddColumnStructure(ColumnStructureDto column, string tableName);

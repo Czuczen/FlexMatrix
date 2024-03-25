@@ -8,7 +8,7 @@
 
         public bool IsNullable { get; set; }
 
-        public string DefaultValue { get; set; }
+        public string? DefaultValue { get; set; }
 
         public int? Length { get; set; }
 

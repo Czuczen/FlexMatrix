@@ -11,56 +11,9 @@ namespace FlexMatrix.Api.Data.Repositories.StructureRepository
         {
         }
 
-        public async Task<IEnumerable<IEnumerable<Dictionary<string, object>>>> GetTableStructure(string tableName)
-        {
-            if (!await TableExist(tableName)) return null;
-
-            // do przerobienia bo  OBJECT_ID(@TableName) to chyba typowo dla mssql
-            // zapytania:
-            // kolumny
-            // klucze główne i unikalne
-            // klucze obce
-            var query = @"
-                SELECT c.name AS ColumnName, t.Name AS DataType
-                FROM sys.columns c
-                INNER JOIN sys.types t ON c.user_type_id = t.user_type_id
-                WHERE c.object_id = OBJECT_ID(@TableName)
-                ORDER BY c.column_id; 
-
-                SELECT i.name AS IndexName, COL_NAME(ic.object_id, ic.column_id) AS ColumnName, i.is_primary_key, i.is_unique
-                FROM sys.indexes AS i
-                INNER JOIN sys.index_columns AS ic ON i.object_id = ic.object_id AND i.index_id = ic.index_id
-                WHERE i.object_id = OBJECT_ID(@TableName);
-
-                SELECT 
-                    fk.name AS ForeignKey,
-                    tp.name AS ParentTable,
-                    tr.name AS ReferenceTable,
-                    cp.name AS ParentColumn,
-                    cr.name AS ReferenceColumn
-                FROM 
-                    sys.foreign_keys AS fk
-                INNER JOIN 
-                    sys.tables AS tp ON fk.parent_object_id = tp.object_id
-                INNER JOIN 
-                    sys.tables AS tr ON fk.referenced_object_id = tr.object_id
-                INNER JOIN 
-                    sys.foreign_key_columns AS fkc ON fk.object_id = fkc.constraint_object_id
-                INNER JOIN 
-                    sys.columns AS cp ON fkc.parent_object_id = cp.object_id AND fkc.parent_column_id = cp.column_id
-                INNER JOIN 
-                    sys.columns AS cr ON fkc.referenced_object_id = cr.object_id AND fkc.referenced_column_id = cr.column_id
-                WHERE 
-                    tp.name = @TableName;";
-
-            var parameters = new Dictionary<string, object> { ["TableName"] = tableName };
-            var result = await Context.ExecuteMultiQuery(query, 3, parameters);
-            return result;
-        }
-
         public async Task<bool> CreateTableStructure(TableStructureDto tableStructure)
         {
-            if (!await TableExist(tableStructure.TableName)) return false;
+            if (await TableExist(tableStructure.TableName)) return false;
 
             var sqlBuilder = new StringBuilder($"CREATE TABLE [{TableSchema}].[{tableStructure.TableName}] (");
             AppendPrimaryKey(sqlBuilder, tableStructure);

@@ -1,4 +1,6 @@
-﻿using Microsoft.Data.SqlClient;
+﻿using FlexMatrix.Api.Consts;
+using FlexMatrix.Api.Data.Parser;
+using Microsoft.Data.SqlClient;
 using System.Data;
 using System.Data.Common;
 
@@ -7,20 +9,23 @@ namespace FlexMatrix.Api.Data.DataBase;
 public sealed class UnitOfWork : IUnitOfWork
 {
     private readonly ILogger<UnitOfWork> _logger;
+    private readonly IParser _parser;
     private readonly DbConnection _connection;
     private DbTransaction? _transaction;
 
 
-    public UnitOfWork(ILogger<UnitOfWork> logger, string connectionString)
+
+    public UnitOfWork(ILogger<UnitOfWork> logger, IParser parser, string connectionString)
     {
-        _connection = new SqlConnection(connectionString);
         _logger = logger;
+        _parser = parser;
+        _connection = new SqlConnection(connectionString);
     }
 
 
-    public async Task<IEnumerable<Dictionary<string, object>>> ExecuteSingleQuery(string query, Dictionary<string, object>? parameters = null)
+    public async Task<IEnumerable<Dictionary<string, object>>> ExecuteSingleQuery(string query, IEnumerable<Tuple<string, string, object>>? parameters = null)
     {
-        _logger.LogDebug("Executing single query. \nQuery:" + query);
+        _logger.LogDebug("Executing single query. \nQuery: " + query);
 
         var results = new List<Dictionary<string, object>>();
 
@@ -34,11 +39,11 @@ public sealed class UnitOfWork : IUnitOfWork
 
             if (parameters != null)
             {
-                foreach (var item in parameters)
+                foreach (var param in parameters)
                 {
                     var parameter = command.CreateParameter();
-                    parameter.ParameterName = $"@{item.Key}";
-                    parameter.Value = item.Value ?? DBNull.Value;
+                    parameter.ParameterName = $"@{param.Item1}";
+                    parameter.Value = param.Item3 != null ? _parser.Parse(ParseStrategies.ToDb, param.Item2, param.Item3) : DBNull.Value;
                     command.Parameters.Add(parameter);
                 }
             }
@@ -54,15 +59,15 @@ public sealed class UnitOfWork : IUnitOfWork
             }
         }
 
-        _logger.LogDebug($"Single query executed. Result:{results.Count} \nQuery:{query}");
+        _logger.LogDebug($"Single query executed. Result: {results.Count} \nQuery: {query}");
 
         return results;
     }
 
-    public async Task<IEnumerable<IEnumerable<Dictionary<string, object>>>> ExecuteMultiQuery(string query, int queriesNumber, 
-        Dictionary<string, object>? parameters = null)
+    public async Task<IEnumerable<IEnumerable<Dictionary<string, object>>>> ExecuteMultiQuery(string query, int queriesNumber,
+        IEnumerable<Tuple<string, string, object>>? parameters = null)
     {
-        _logger.LogDebug("Executing multi query. \nQuery:" + query);
+        _logger.LogDebug("Executing multi query. \nQuery: " + query);
 
         var results = new List<List<Dictionary<string, object>>>();
 
@@ -76,11 +81,11 @@ public sealed class UnitOfWork : IUnitOfWork
 
             if (parameters != null)
             {
-                foreach (var item in parameters)
+                foreach (var param in parameters)
                 {
                     var parameter = command.CreateParameter();
-                    parameter.ParameterName = $"@{item.Key}";
-                    parameter.Value = item.Value ?? DBNull.Value;
+                    parameter.ParameterName = $"@{param.Item1}";
+                    parameter.Value = param.Item3 != null ? _parser.Parse(ParseStrategies.ToDb, param.Item2, param.Item3) : DBNull.Value;
                     command.Parameters.Add(parameter);
                 }
             }
@@ -107,14 +112,14 @@ public sealed class UnitOfWork : IUnitOfWork
             }
         }
 
-        _logger.LogDebug($"Multi query executed. Result:{results.Count} \nQuery:{query}");
+        _logger.LogDebug($"Multi query executed. Result: {results.Count} \nQuery: {query}");
 
         return results;
     }
 
-    public async Task<bool> ExecuteCommand(string sql, Dictionary<string, object>? parameters = null)
+    public async Task<bool> ExecuteCommand(string sql, IEnumerable<Tuple<string, string, object>>? parameters = null)
     {
-        _logger.LogDebug("Executing command. \nSql:" + sql);
+        _logger.LogDebug("Executing command. \nSql: " + sql);
 
         if (_transaction == null)
             throw new InvalidOperationException("The transaction has not been opened.");
@@ -125,25 +130,25 @@ public sealed class UnitOfWork : IUnitOfWork
 
         if (parameters != null)
         {
-            foreach (var item in parameters)
+            foreach (var param in parameters)
             {
                 var parameter = command.CreateParameter();
-                parameter.ParameterName = $"@{item.Key}";
-                parameter.Value = item.Value ?? DBNull.Value;
+                parameter.ParameterName = $"@{param.Item1}";
+                parameter.Value = param.Item3 != null ? _parser.Parse(ParseStrategies.ToDb, param.Item2, param.Item3) : DBNull.Value;
                 command.Parameters.Add(parameter);
             }
         }
 
         var result = await command.ExecuteNonQueryAsync();
 
-        _logger.LogDebug($"Command executed. Result:{result} \nSql:{sql}");
+        _logger.LogDebug($"Command executed. Result: {result} \nSql: {sql}");
 
         return result > 0;
     }
 
-    public async Task<object?> ExecuteScalarCommand(string sql, Dictionary<string, object>? parameters = null)
+    public async Task<object?> ExecuteScalarCommand(string sql, IEnumerable<Tuple<string, string, object>>? parameters = null)
     {
-        _logger.LogDebug("Executing scalar command. \nSql:" + sql);
+        _logger.LogDebug("Executing scalar command. \nSql: " + sql);
 
         if (_transaction == null)
             throw new InvalidOperationException("The transaction has not been opened.");
@@ -154,18 +159,18 @@ public sealed class UnitOfWork : IUnitOfWork
 
         if (parameters != null)
         {
-            foreach (var item in parameters)
+            foreach (var param in parameters)
             {
                 var parameter = command.CreateParameter();
-                parameter.ParameterName = $"@{item.Key}";
-                parameter.Value = item.Value ?? DBNull.Value;
+                parameter.ParameterName = $"@{param.Item1}";
+                parameter.Value = param.Item3 != null ? _parser.Parse(ParseStrategies.ToDb, param.Item2, param.Item3) : DBNull.Value;
                 command.Parameters.Add(parameter);
             }
         }
 
         var result = await command.ExecuteScalarAsync();
 
-        _logger.LogDebug($"Scalar command executed. Result:{result} \nSql:{sql}");
+        _logger.LogDebug($"Scalar command executed. Result: {result} \nSql: {sql}");
 
         return result;
     }

@@ -1,9 +1,6 @@
 using FlexMatrix.Api.Configuration;
 using FlexMatrix.Api.Data.DataBase;
 using FlexMatrix.Api.Logging;
-using FlexMatrix.Api.Middlewares;
-using Microsoft.Data.SqlClient;
-using System.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -28,8 +25,6 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-
-//app.UseMiddleware<DbContextInitializationMiddleware>();
 
 app.UseAuthorization();
 

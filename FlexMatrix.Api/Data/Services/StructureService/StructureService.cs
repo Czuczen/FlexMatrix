@@ -13,12 +13,6 @@ namespace FlexMatrix.Api.Data.Services.StructureService
         }
 
 
-        public async Task<IEnumerable<IEnumerable<Dictionary<string, object>>>> GetTableStructure(string tableName)
-        {
-            var result = await _repository.GetTableStructure(tableName);
-            return result;
-        }
-
         public async Task<bool> CreateTableStructure(TableStructureDto tableStructure)
         {
             var result = await _repository.CreateTableStructure(tableStructure);
