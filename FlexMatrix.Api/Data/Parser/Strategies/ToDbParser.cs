@@ -3,6 +3,7 @@ using System;
 using System.Globalization;
 using System.Text.Encodings.Web;
 using System.Text.Json;
+using System.Xml.Linq;
 
 namespace FlexMatrix.Api.Data.Parser.Strategies
 {
@@ -24,7 +25,9 @@ namespace FlexMatrix.Api.Data.Parser.Strategies
                 case SqlTypes.SmallInt:
                 case SqlTypes.TinyInt:
                 case SqlTypes.BigInt:
-                    return Convert.ToInt64(value, cultureInfo);
+                    //value = value is JsonElement element ? Parser.ConvertFromJsonElement<long>(element) : value;
+                    return ((JsonElement)value).GetInt64();
+                    //return Convert.ToInt64(value.ToString(), cultureInfo);
                 case SqlTypes.Float:
                 case SqlTypes.Real:
                     return Convert.ToDouble(value, cultureInfo);

@@ -1,6 +1,7 @@
 ﻿using FlexMatrix.Api.Data.Parser.Strategies;
 using System;
 using System.Reflection;
+using System.Text.Json;
 
 namespace FlexMatrix.Api.Data.Parser
 {
@@ -18,6 +19,12 @@ namespace FlexMatrix.Api.Data.Parser
             _parseStrategies.Single(s => s.StrategyName == strategyName).Parse(valueType, value);
 
             return value;
+        }
+
+        public static T ConvertFromJsonElement<T>(JsonElement element)
+        {
+            var json = element.GetRawText();
+            return JsonSerializer.Deserialize<T>(json);
         }
     }
 }
