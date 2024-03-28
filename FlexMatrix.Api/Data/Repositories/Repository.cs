@@ -5,31 +5,58 @@ namespace FlexMatrix.Api.Data.Repositories
 {
     public abstract class Repository
     {
+        private string? _primaryKeyName;
+        private string? _tableSchema;
+
         protected readonly IUnitOfWork Context;
 
-        protected string PrimaryKeyName { get; set; } = "Id";
-
-        protected string TableSchema { get; set; } = "dbo";
-
-
-
+        
         protected Repository(IUnitOfWork context)
         {
             Context = context;
         }
 
-        protected async Task<IEnumerable<Tuple<string, string, object>>> GenerateParameters(string tableName, Dictionary<string, object> dictParameters)
+
+        protected async Task<string> GetPrimaryKeyName(string tableName)
         {
-            var ret = new List<Tuple<string, string, object>>();
+            if (_primaryKeyName != null)
+                return _primaryKeyName;
 
-            var columnsInfo = await GetColumnNamesWithTypes(tableName);
+            var sql = @"SELECT kcu.COLUMN_NAME 
+                        FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS tc
+                        JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE kcu
+                          ON tc.CONSTRAINT_NAME = kcu.CONSTRAINT_NAME
+                         AND tc.TABLE_SCHEMA = kcu.TABLE_SCHEMA
+                         AND tc.TABLE_NAME = kcu.TABLE_NAME
+                        WHERE tc.TABLE_NAME = @TableName
+                          AND tc.CONSTRAINT_TYPE = 'PRIMARY KEY'";
 
-            foreach (var param in dictParameters)
-                ret.Add(new Tuple<string, string, object>(param.Key, columnsInfo.Single(c =>
-                    c["ColumnName"].ToString() == param.Key)["DataType"].ToString(), param.Value));
+            var parameters = new List<Tuple<string, string, object>>{ new Tuple<string, string, object>("TableName", SqlTypes.VarChar, tableName) };
+            _primaryKeyName = (string) await Context.ExecuteScalarCommand(sql, parameters);
 
-            return ret; ;
+            return _primaryKeyName;
         }
+
+        protected async Task<string> GetTableSchema(string tableName)
+        {
+            if (_tableSchema != null) 
+                return _tableSchema;
+
+            var sql = @"SELECT TABLE_SCHEMA 
+                        FROM INFORMATION_SCHEMA.TABLES 
+                        WHERE TABLE_NAME = @TableName";
+
+            var parameters = new List<Tuple<string, string, object>> { new Tuple<string, string, object>("TableName", SqlTypes.VarChar, tableName) };
+            _tableSchema = (string) await Context.ExecuteScalarCommand(sql, parameters);
+
+            return _tableSchema;
+        }
+
+
+
+
+
+
 
         protected async Task<bool> ColumnExist(string tableName, string columnName)
         {
@@ -48,7 +75,7 @@ namespace FlexMatrix.Api.Data.Repositories
             {
                 new Tuple<string, string, object>("TableName", SqlTypes.VarChar, tableName),
                 new Tuple<string, string, object>("ColumnName", SqlTypes.VarChar, columnName),
-                new Tuple<string, string, object>("TableSchema", SqlTypes.VarChar, TableSchema)
+                new Tuple<string, string, object>("TableSchema", SqlTypes.VarChar, await GetTableSchema(tableName))
             };
 
             var result = (bool) await Context.ExecuteScalarCommand(sql, parameters);
@@ -70,7 +97,7 @@ namespace FlexMatrix.Api.Data.Repositories
             var parameters = new List<Tuple<string, string, object>>
             {
                 new Tuple<string, string, object>("TableName", SqlTypes.VarChar, tableName),
-                new Tuple<string, string, object>("TableSchema", SqlTypes.VarChar, TableSchema)
+                new Tuple<string, string, object>("TableSchema", SqlTypes.VarChar, await GetTableSchema(tableName))
             };
 
             var result = (bool) await Context.ExecuteScalarCommand(sql, parameters);
@@ -81,9 +108,21 @@ namespace FlexMatrix.Api.Data.Repositories
         {
             var query = @"SELECT TABLE_NAME 
                             FROM INFORMATION_SCHEMA.TABLES 
+                            WHERE TABLE_TYPE = 'BASE TABLE';";
+
+            var result = await Context.ExecuteSingleQuery(query);
+            var tableNames = result.Select(dict => dict["TABLE_NAME"].ToString());
+
+            return tableNames;
+        }
+
+        protected async Task<IEnumerable<string>> GetTableNames(string tableSchema)
+        {
+            var query = @"SELECT TABLE_NAME 
+                            FROM INFORMATION_SCHEMA.TABLES 
                             WHERE TABLE_TYPE = 'BASE TABLE' AND TABLE_SCHEMA = @TableSchema;";
 
-            var parameters = new List<Tuple<string, string, object>>{ new Tuple<string, string, object>("TableSchema", SqlTypes.VarChar, TableSchema) };
+            var parameters = new List<Tuple<string, string, object>>{ new Tuple<string, string, object>("TableSchema", SqlTypes.VarChar, tableSchema) };
             var result = await Context.ExecuteSingleQuery(query, parameters);
 
             var tableNames = result.Select(dict => dict["TABLE_NAME"].ToString());
@@ -135,7 +174,22 @@ namespace FlexMatrix.Api.Data.Repositories
 
             var parameters = new List<Tuple<string, string, object>>{ new Tuple<string, string, object>("TableName", SqlTypes.VarChar, tableName) };
             var foreignKeys = await Context.ExecuteSingleQuery(query, parameters);
+
             return foreignKeys;
         }
+
+        protected async Task<IEnumerable<Tuple<string, string, object>>> GenerateParameters(string tableName, Dictionary<string, object> dictParameters)
+        {
+            var ret = new List<Tuple<string, string, object>>();
+
+            var columnsInfo = await GetColumnNamesWithTypes(tableName);
+
+            foreach (var param in dictParameters)
+                ret.Add(new Tuple<string, string, object>(param.Key, columnsInfo.Single(c =>
+                    c["ColumnName"].ToString() == param.Value.ToString())["DataType"].ToString(), param.Value));
+
+            return ret; ;
+        }
+
     }
 }

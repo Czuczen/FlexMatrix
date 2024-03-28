@@ -1,13 +1,19 @@
-﻿namespace FlexMatrix.Api.Data.Models
+﻿using FlexMatrix.Api.Attributes.Validation;
+
+namespace FlexMatrix.Api.Data.Models
 {
     public class ColumnStructureDto
     {
+        [SafeForSql]
         public string Name { get; set; }
 
+        [SafeForSql]
         public string Type { get; set; }
 
         public bool IsNullable { get; set; }
 
+        //[SafeForSql]
+        //public object? DefaultValue { get; set; }
         public string? DefaultValue { get; set; }
 
         public int? Length { get; set; }
@@ -20,12 +26,19 @@
 
         public bool IsForeignKey { get; set; }
 
+        [SafeForSql]
+        public string TableSchema { get; set; } = "dbo";
+
+        [SafeForSql]
         public string? ReferencesTableName { get; set; }
 
-        public string? ReferencesTablePrimaryKeyName { get; set; }
+        [SafeForSql]
+        public string? ReferencesTablePrimaryKeyName { get; set; } = "Id";
 
+        [SafeForSql]
         public string? DeleteType {  get; set; }
 
+        [SafeForSql]
         public string? UpdateType { get; set; }
     }
 }

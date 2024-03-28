@@ -18,5 +18,29 @@ namespace FlexMatrix.Api.Data.Services.StructureService
             var result = await _repository.CreateTableStructure(tableStructure);
             return result;
         }
+
+        public async Task<bool> AddColumnStructure(ColumnStructureDto column, string tableName)
+        {
+            var result = await _repository.AddColumnStructure(column, tableName);
+            return result;
+        }
+
+        public async Task<bool> DeleteTable(string tableName)
+        {
+            var result = await _repository.DeleteTable(tableName);
+            return result;
+        }
+
+        public async Task<bool> RemoveColumn(string tableName, string columnName)
+        {
+            var result = await _repository.RemoveColumn(tableName, columnName);
+            return result;
+        }
+
+        public async Task<bool> RemoveRelations(string tableName)
+        {
+            var result = await _repository.RemoveRelations(tableName);
+            return result;
+        }
     }
 }

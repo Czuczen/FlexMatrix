@@ -19,12 +19,100 @@ namespace FlexMatrix.Api.Controllers
 
 
         [UnitOfWork]
-        [HttpPost("CreateTableStructure")]
-        public async Task<IActionResult> CreateNewTableStructure(TableStructureDto tableStructure)
+        [HttpPost("CreateTable")]
+        public async Task<IActionResult> CreateTableStructure(TableStructureDto tableStructure)
         {
             if (ModelState.IsValid)
             {
                 var result = await _structureService.CreateTableStructure(tableStructure);
+                if (result)
+                {
+                    return Ok();
+                }
+                else
+                {
+                    return StatusCode(500, "Internal server error: " + "eeeerrrrroooorrr");
+                }
+            }
+            else
+            {
+                return BadRequest(ModelState);
+            }
+        }
+
+        [UnitOfWork]
+        [HttpPost("AddColumn")]
+        public async Task<IActionResult> AddColumnStructure(ColumnStructureDto column, string tableName)
+        {
+            if (ModelState.IsValid)
+            {
+                var result = await _structureService.AddColumnStructure(column, tableName);
+                if (result)
+                {
+                    return Ok();
+                }
+                else
+                {
+                    return StatusCode(500, "Internal server error: " + "eeeerrrrroooorrr");
+                }
+            }
+            else
+            {
+                return BadRequest(ModelState);
+            }
+        }
+
+        [UnitOfWork]
+        [HttpPost("RemoveColumn")]
+        public async Task<IActionResult> RemoveColumn(string tableName, string columnName)
+        {
+            if (ModelState.IsValid)
+            {
+                var result = await _structureService.RemoveColumn(tableName, columnName);
+                if (result)
+                {
+                    return Ok();
+                }
+                else
+                {
+                    return StatusCode(500, "Internal server error: " + "eeeerrrrroooorrr");
+                }
+            }
+            else
+            {
+                return BadRequest(ModelState);
+            }
+        }
+
+        [UnitOfWork]
+        [HttpPost("DeleteTable")]
+        public async Task<IActionResult> DeleteTable(string tableName)
+        {
+            if (ModelState.IsValid)
+            {
+                var result = await _structureService.DeleteTable(tableName);
+                if (result)
+                {
+                    return Ok();
+                }
+                else
+                {
+                    return StatusCode(500, "Internal server error: " + "eeeerrrrroooorrr");
+                }
+            }
+            else
+            {
+                return BadRequest(ModelState);
+            }
+        }
+
+        [UnitOfWork]
+        [HttpPost("RemoveRelations")]
+        public async Task<IActionResult> RemoveRelations(string tableName)
+        {
+            if (ModelState.IsValid)
+            {
+                var result = await _structureService.RemoveRelations(tableName);
                 if (result)
                 {
                     return Ok();

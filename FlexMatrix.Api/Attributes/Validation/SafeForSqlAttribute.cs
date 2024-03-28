@@ -10,17 +10,17 @@ namespace FlexMatrix.Api.Attributes.Validation
         {
             var stringValue = value as string;
 
-            if (string.IsNullOrWhiteSpace(stringValue))
-            {
-                return new ValidationResult("Value cannot be empty.");
-            }
+            //if (string.IsNullOrWhiteSpace(stringValue))
+            //{
+            //    return new ValidationResult("Value cannot be empty.");
+            //}
 
             // Przykładowa prosta walidacja, sprawdzająca czy ciąg nie zawiera znaków specjalnych
             // Można rozszerzyć o dodatkowe warunki bezpieczeństwa
-            if (!Regex.IsMatch(stringValue, @"^[a-zA-Z0-9_]+$"))
-            {
-                return new ValidationResult("Value contains invalid characters.");
-            }
+            //if (!Regex.IsMatch(stringValue, @"^[a-zA-Z0-9_]+$"))
+            //{
+            //    return new ValidationResult("Value contains invalid characters.");
+            //}
 
             return ValidationResult.Success;
         }

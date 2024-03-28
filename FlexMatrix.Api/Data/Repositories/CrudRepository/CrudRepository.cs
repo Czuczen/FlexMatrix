@@ -14,7 +14,7 @@ namespace FlexMatrix.Api.Data.Repositories.CrudRepository
 
         public async Task<Dictionary<string, object>> GetById(string tableName, object id)
         {
-            var query = $"SELECT * FROM [{TableSchema}].[{tableName}] WHERE {PrimaryKeyName} = @Id";
+            var query = $"SELECT * FROM [{await GetTableSchema(tableName)}].[{tableName}] WHERE {await GetPrimaryKeyName(tableName)} = @Id";
 
             var parameters = await GenerateParameters(tableName, new Dictionary<string, object> { ["Id"] = id });
 
@@ -24,7 +24,7 @@ namespace FlexMatrix.Api.Data.Repositories.CrudRepository
 
         public async Task<IEnumerable<Dictionary<string, object>>> GetAll(string tableName)
         {
-            var query = $"SELECT * FROM [{TableSchema}].[{tableName}]";
+            var query = $"SELECT * FROM [{await GetTableSchema(tableName)}].[{tableName}]";
 
             var results = await Context.ExecuteSingleQuery(query);
             return results;
@@ -34,7 +34,7 @@ namespace FlexMatrix.Api.Data.Repositories.CrudRepository
         {
             var columns = string.Join(", ", obj.Keys.Select(k => $"[{k}]"));
             var sqlParameters = string.Join(", ", obj.Keys.Select(k => "@" + k));
-            var sql = $"INSERT INTO [{TableSchema}].[{tableName}] ({columns}) VALUES ({sqlParameters})";
+            var sql = $"INSERT INTO [{await GetTableSchema(tableName)}].[{tableName}] ({columns}) VALUES ({sqlParameters})";
             var parameters = await GenerateParameters(tableName, obj);
 
             var result = await Context.ExecuteCommand(sql, parameters);
@@ -44,7 +44,7 @@ namespace FlexMatrix.Api.Data.Repositories.CrudRepository
         public async Task<bool> Update(string tableName, Dictionary<string, object> obj)
         {
             var setClause = string.Join(", ", obj.Keys.Select(k => $"[{k}] = @{k}"));
-            var sql = $"UPDATE [{TableSchema}].[{tableName}] SET {setClause} WHERE {PrimaryKeyName} = @Id";
+            var sql = $"UPDATE [{await GetTableSchema(tableName)}].[{tableName}] SET {setClause} WHERE {await GetPrimaryKeyName(tableName)} = @Id";
             var parameters = await GenerateParameters(tableName, obj);
 
             var result = await Context.ExecuteCommand(sql, parameters);
@@ -53,7 +53,7 @@ namespace FlexMatrix.Api.Data.Repositories.CrudRepository
 
         public async Task<bool> Delete(string tableName, int id)
         {
-            var sql = $"DELETE FROM [{TableSchema}].[{tableName}] WHERE {PrimaryKeyName} = @Id";
+            var sql = $"DELETE FROM [{await GetTableSchema(tableName)}].[{tableName}] WHERE {await GetPrimaryKeyName(tableName)} = @Id";
             var parameters = await GenerateParameters(tableName, new Dictionary<string, object> { ["Id"] = id });
 
             var result = await Context.ExecuteCommand(sql, parameters);

@@ -1,4 +1,5 @@
-﻿using FlexMatrix.Api.Data.DataBase;
+﻿using FlexMatrix.Api.Consts;
+using FlexMatrix.Api.Data.DataBase;
 using FlexMatrix.Api.Data.Models;
 using Microsoft.AspNetCore.DataProtection.KeyManagement;
 using System.Text;
@@ -15,7 +16,7 @@ namespace FlexMatrix.Api.Data.Repositories.StructureRepository
         {
             if (await TableExist(tableStructure.TableName)) return false;
 
-            var sqlBuilder = new StringBuilder($"CREATE TABLE [{TableSchema}].[{tableStructure.TableName}] (");
+            var sqlBuilder = new StringBuilder($"CREATE TABLE [{tableStructure.TableSchema}].[{tableStructure.TableName}] (");
             AppendPrimaryKey(sqlBuilder, tableStructure);
 
             foreach (var column in tableStructure.Columns)
@@ -34,9 +35,9 @@ namespace FlexMatrix.Api.Data.Repositories.StructureRepository
 
             foreach (var column in tableStructure.Columns.Where(c => c.IsForeignKey))
             {
-                sqlBuilder.Append($@"ALTER TABLE [{TableSchema}].[{tableStructure.TableName}]
+                sqlBuilder.Append($@"ALTER TABLE [{tableStructure.TableSchema}].[{tableStructure.TableName}]
                     ADD CONSTRAINT FK_{tableStructure.TableName}_{column.Name}
-                    FOREIGN KEY ([{column.Name}]) REFERENCES [{TableSchema}].[{column.ReferencesTableName}]({column.ReferencesTablePrimaryKeyName})");
+                    FOREIGN KEY ([{column.Name}]) REFERENCES [{column.TableSchema}].[{column.ReferencesTableName}]({column.ReferencesTablePrimaryKeyName})");
 
                 if (!string.IsNullOrWhiteSpace(column.DeleteType))
                     sqlBuilder.Append($" ON DELETE {column.DeleteType}");
@@ -57,7 +58,7 @@ namespace FlexMatrix.Api.Data.Repositories.StructureRepository
                 throw new InvalidOperationException($"Column '{column.Name}' already exists in table '{tableName}'.");
 
             var nullableSql = column.IsNullable ? "NULL" : "NOT NULL";
-            var sqlBuilder = new StringBuilder($"ALTER TABLE [{TableSchema}].[{tableName}] ADD [{column.Name}] {column.Type} {nullableSql}");
+            var sqlBuilder = new StringBuilder($"ALTER TABLE [{await GetTableSchema(tableName)}].[{tableName}] ADD [{column.Name}] {column.Type} {nullableSql}");
 
             if (!string.IsNullOrWhiteSpace(column.DefaultValue))
                 sqlBuilder.Append($" DEFAULT {column.DefaultValue}");
@@ -66,9 +67,9 @@ namespace FlexMatrix.Api.Data.Repositories.StructureRepository
 
             if (column.IsForeignKey)
             {
-                sqlBuilder.Append($@"ALTER TABLE [{TableSchema}].[{tableName}]
+                sqlBuilder.Append($@"ALTER TABLE [{await GetTableSchema(tableName)}].[{tableName}]
                     ADD CONSTRAINT FK_{tableName}_{column.Name}
-                    FOREIGN KEY ([{column.Name}]) REFERENCES [{TableSchema}].[{column.ReferencesTableName}]({column.ReferencesTablePrimaryKeyName})");
+                    FOREIGN KEY ([{column.Name}]) REFERENCES [{column.TableSchema}].[{column.ReferencesTableName}]({column.ReferencesTablePrimaryKeyName})");
 
                 if (!string.IsNullOrWhiteSpace(column.DeleteType))
                     sqlBuilder.Append($" ON DELETE {column.DeleteType}");
@@ -85,20 +86,23 @@ namespace FlexMatrix.Api.Data.Repositories.StructureRepository
 
         public async Task<bool> RemoveColumn(string tableName, string columnName)
         {
-            // Najpierw usuń relacje dla tej kolumny, jeśli istnieją
             var removeFKSql = $@"
-                IF EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE WHERE TABLE_NAME = '{tableName}' AND COLUMN_NAME = '{columnName}')
+                IF EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE WHERE TABLE_NAME = @TableName AND COLUMN_NAME = @ColumnName)
                 BEGIN
                     DECLARE @ConstraintName nvarchar(200);
-                    SELECT @ConstraintName = CONSTRAINT_NAME FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE WHERE TABLE_NAME = '{tableName}' AND COLUMN_NAME = '{columnName}';
-                    EXEC('ALTER TABLE [{TableSchema}].[' + {tableName} + '] DROP CONSTRAINT ' + @ConstraintName);
+                    SELECT @ConstraintName = CONSTRAINT_NAME FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE WHERE TABLE_NAME = @TableName AND COLUMN_NAME = @ColumnName;
+                    EXEC('ALTER TABLE [{await GetTableSchema(tableName)}].[@TableName] DROP CONSTRAINT ' + @ConstraintName);
                 END";
 
-            await Context.ExecuteCommand(removeFKSql);
+            var parameters = new List<Tuple<string, string, object>> { 
+                new Tuple<string, string, object>("TableName", SqlTypes.VarChar, tableName),
+                new Tuple<string, string, object>("ColumnName", SqlTypes.VarChar, columnName)};
 
-            // Następnie usuń kolumnę
-            var sql = $"ALTER TABLE [{TableSchema}].[{tableName}] DROP COLUMN [{columnName}];";
+            await Context.ExecuteCommand(removeFKSql, parameters);
+
+            var sql = $"ALTER TABLE [{await GetTableSchema(tableName)}].[{tableName}] DROP COLUMN [{columnName}];";
             var result = await Context.ExecuteCommand(sql);
+
             return result;
         }
 
@@ -108,7 +112,7 @@ namespace FlexMatrix.Api.Data.Repositories.StructureRepository
             await RemoveRelations(tableName);
 
             // Usuń tabelę
-            var sql = $"DROP TABLE IF EXISTS [{TableSchema}].[{tableName}];";
+            var sql = $"DROP TABLE IF EXISTS [{await GetTableSchema(tableName)}].[{tableName}];";
             var result = await Context.ExecuteCommand(sql);
             return result;
         }
@@ -122,7 +126,7 @@ namespace FlexMatrix.Api.Data.Repositories.StructureRepository
                 FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS 
                 WHERE CONSTRAINT_TYPE = 'FOREIGN KEY' 
                 AND TABLE_NAME = '{tableName}'
-                AND TABLE_SCHEMA = '{TableSchema}';
+                AND TABLE_SCHEMA = '{await GetTableSchema(tableName)}';
 
                 EXEC sp_executesql @sql;
                 ";
